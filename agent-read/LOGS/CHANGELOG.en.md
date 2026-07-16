@@ -3340,3 +3340,12 @@ Validation: local `py_compile`, config JSON, all-12-episode dry-runs, and isolat
 - The former four-panel image is backed up as `all_strategies_contact_sheet_v2_4panel.png`; the requested `all_strategies_contact_sheet.png` is now the 1920x1152 six-panel version.
 
 Validation: `py_compile` in `RoboTwin_bw`, exporter dry-run, 20-candidate object-partition audit, summary-field and candidate-ID checks, OpenCV reads plus dimensions/hashes for all seven V3 PNGs, and visual QA of the 1920x1152 sheet all passed. No IK, planning, or robot execution was run.
+
+## 2026-07-16 (V3 candidate-reuse planner videos and 4x5 comparison)
+
+- `run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh` now accepts `--reuse_preview_candidate_group orientation|fused`. The default remains `orientation`, and invalid values exit 2 before execution.
+- Replayed the `pick_diverse_bottles/id0` approach-axis Orientation, Fused, and canonical Top-score candidates in isolated output roots without overwriting OursV2 or historical ablations.
+- Generated a 2x2 candidate-execution video and a 4x5 full-pipeline video with headers separated from content. Explanatory cards replace unavailable matching Stage-2 repaints; historical repaints are not reused.
+- Orientation/Fused use `L16/R5` and `L14/R16` at frames 38/78 and complete successfully. Top-score uses `L0/R3` and `L0/R1`; its final left-arm action misses by `0.0536 m` and is explicitly labeled.
+
+Validation: local/remote `bash -n`, valid/invalid group dry-runs, all three planner runs, both compositor dry-runs, manifest available-path audits, ffprobe, full decode of both H.264/yuv420p/30-fps/21.4-s outputs, and t=8/16 s visual QA passed. The first 4x5 QA found three overlapping long labels; shortened labels were re-encoded and rechecked. A temporary heredoc frame-extraction parse error and missing `jq` only affected QA commands; standalone FFmpeg/Python checks completed the audit.

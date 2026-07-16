@@ -104,3 +104,27 @@ done
 ```
 
 The formal result contains 12 episodes, 152 640×576 strategy PNGs, 38 1280×1152 contact sheets, 12 primary videos, and 10 AnyGrasp MP4s derived from existing D435 PNGs. Pine2's default `python3` lacks OpenCV, so candidate export and image validation must use the `RoboTwin_bw` Python shown above.
+
+## `pick_diverse_bottles/id0` V3 candidate-reuse videos
+
+The six-panel candidate image is:
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/frame_000038/all_strategies_contact_sheet.png
+```
+
+The corresponding candidates were replayed by the planner without overwriting previous results. The isolated outputs are:
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v3_candidate_videos/
+├── candidate_retarget_grid_2x2.mp4
+├── candidate_retarget_grid_2x2_config.json
+├── candidate_retarget_grid_2x2_manifest.json
+├── pipeline_grid_4x5_v3_candidates.mp4
+├── pipeline_grid_4x5_v3_candidates_config.json
+└── pipeline_grid_4x5_v3_candidates_manifest.json
+```
+
+The 2x2 video contains Orientation, Fused, Top-score, and OursV2. The 4x5 video retains Human RGB, HaMeR, inpainting, FoundationPose, Foundation replay, AnyGrasp, Dense V2, OursV2, and its matched repaint. No new Stage-2 repaint was generated for Top/Orientation/Fused, so their adjacent cells are explanatory cards; historical repaints are not mispaired with the new candidates.
+
+Method videos are normalized over full progress to 21.4 seconds: Orientation/Fused are 10.3 seconds, Top-score is 10.5 seconds, and OursV2 is 21.4 seconds. Both outputs are H.264, `yuv420p`, 30 fps, and pass full decode. Top-score has a `53.6 mm` final left-arm action miss, explicitly recorded in the header and manifest.

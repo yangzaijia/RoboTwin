@@ -14,6 +14,7 @@ VIEWER_WAIT_AT_END=0
 DEBUG_STOP_AFTER_KEYFRAME1=0
 OUTPUT_ROOT=""
 PREVIEW_ROOT_BASE=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435
+REUSE_PREVIEW_CANDIDATE_GROUP=orientation
 TRAJECTORY_MODE=cartesian_interp_ik
 CARTESIAN_AUTO_STEP_M=0.01
 JOINT_INTERP_WAYPOINTS=40
@@ -99,6 +100,14 @@ while (($# > 0)); do
       ;;
     --preview_root)
       PREVIEW_ROOT_BASE="$2"
+      shift 2
+      ;;
+    --reuse_preview_candidate_group)
+      REUSE_PREVIEW_CANDIDATE_GROUP="$2"
+      if [[ "$REUSE_PREVIEW_CANDIDATE_GROUP" != "orientation" && "$REUSE_PREVIEW_CANDIDATE_GROUP" != "fused" ]]; then
+        echo "ERROR: --reuse_preview_candidate_group must be orientation or fused" >&2
+        exit 2
+      fi
       shift 2
       ;;
     --trajectory_mode)
@@ -409,7 +418,7 @@ for TASK in "${TASKS[@]}"; do
     done
     IDS=("${FILTERED_IDS[@]}")
   fi
-  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} preview_root=${PREVIEW_ROOT_BASE} remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
+  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
   for ID in "${IDS[@]}"; do
     ANY=${ANY_ROOT}/foundation_input_${ID}
     REPLAY=/home/zaijia001/ssd/data/piper/hand/${TASK}/foundation_replay_d435/foundation_input_${ID}
@@ -446,7 +455,7 @@ for TASK in "${TASKS[@]}"; do
       --output_dir "$OUT" \
       --reuse_preview_summary_json "$PREVIEW" \
       --reuse_preview_frame_mode annotated_json_keyframes \
-      --reuse_preview_candidate_group orientation \
+      --reuse_preview_candidate_group "${REUSE_PREVIEW_CANDIDATE_GROUP}" \
       --reuse_preview_top_rank 1 \
       --image_width 640 \
       --image_height 480 \

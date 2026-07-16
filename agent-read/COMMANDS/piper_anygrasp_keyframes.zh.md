@@ -996,3 +996,43 @@ bash /home/zaijia001/ssd/RoboTwin/code_painting/run_plan_keyframes_human_replay_
   --wrist_left_lateral_offset_m -0.0207 --wrist_right_lateral_offset_m 0.0274 \
   --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/L16_human_replay_clean
 ```
+
+## L15.19.4：复用 V3 候选生成隔离规划视频
+
+`run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh` 现在接受 `--reuse_preview_candidate_group orientation|fused`，默认仍为 `orientation`，因此旧命令语义不变。该参数只决定 planner 从已有 preview summary 读取哪一组候选；它不重新排序、不修改 OursV2，也不覆盖旧输出。
+
+参数模板（不可直接运行）：
+
+```bash
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --tasks <TASK> --ids <ID> \
+  --preview_root <PREVIEW_ROOT> \
+  --reuse_preview_candidate_group <orientation|fused> \
+  --output_root <ISOLATED_OUTPUT_ROOT> \
+  --candidate_orientation_remap_label identity \
+  --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12
+```
+
+可运行的 Orientation 例子：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --gpu 2 --tasks pick_diverse_bottles --ids 0 \
+  --preview_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3_full \
+  --reuse_preview_candidate_group orientation \
+  --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v3_orientation_approach_20260716 \
+  --candidate_orientation_remap_label identity \
+  --candidate_target_local_x_offset_m 0.0 --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12 \
+  --debug_gripper_actor_forward_axis local_z --visualize_targets \
+  --disable_execution_collisions --trajectory_mode cartesian_interp_ik \
+  --cartesian_auto_step_m 0.03 --execute_partial_cartesian_plan \
+  --allow_partial_dual_stage --reach_error_pose_source ee \
+  --ik_max_rotation_threshold_rad 3.14 --viewer_wait_at_end 0 --continue_on_error
+```
+
+Fused 使用同一 approach-axis summary，把 group 改为 `fused`。canonical Top-score 使用 score-only preview root `anygrasp_h2o_preview_d435_robot_frame_topscore_canonical_v3_full`，并复用其中的 `fused` 组，因为该 summary 的 fused 权重是 `1.0 score + 0.0 orientation`。
+
+本次 `pick_diverse_bottles/id0`：Orientation/Fused 在 frame 38 为 `L16/R5`、frame 78 为 `L14/R16`，两者执行成功；Top-score 为 `L0/R3`、`L0/R1`，最后左臂 action miss `0.0536 m`。这些是 planner 可视化结果，不等价于物理有效抓取验证。

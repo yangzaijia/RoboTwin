@@ -3338,3 +3338,12 @@ Validation: 两个脚本本地 `py_compile`、配置 JSON、12-episode dry-run �
 - 旧四格图备份为 `all_strategies_contact_sheet_v2_4panel.png`；用户指定的 `all_strategies_contact_sheet.png` 发布为 1920×1152 六格版本。
 
 Validation: `RoboTwin_bw` 下 `py_compile`、V3 exporter dry-run、20-candidate object partition、summary 字段/候选 ID 审计、全部 7 张 V3 PNG OpenCV 读取、尺寸/hash 检查和 1920×1152 成品视觉 QA 均通过。未运行 IK、规划或机器人执行。
+
+## 2026-07-16（V3 候选复用规划视频与 4×5 对比）
+
+- `run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh` 新增 `--reuse_preview_candidate_group orientation|fused`；默认保持 `orientation`，非法值在运行前退出 2。
+- 在隔离目录重新规划 `pick_diverse_bottles/id0` 的 approach-axis Orientation、Fused 和 canonical Top-score 候选，不覆盖旧 OursV2 或历史消融输出。
+- 生成 2×2 候选执行视频和 4×5 完整链路视频；标题栏与画面分离。新策略没有对应 Stage-2 repaint 时使用说明卡片，未复用历史 repaint。
+- Orientation/Fused 的 frame 38/78 候选均为 `L16/R5`、`L14/R16` 且执行成功；Top-score 为 `L0/R3`、`L0/R1`，最终左臂 action miss `0.0536 m`，如实标记。
+
+Validation: 本地/远端 `bash -n`、合法/非法 group dry-run、三个 planner 实跑、两个 compositor dry-run、manifest 可用路径审计、ffprobe、两个 H.264/yuv420p/30 fps/21.4 s 成品完整解码，以及 t=8/16 s 视觉 QA 通过。4×5 第一次 QA 发现三个长标题重叠，缩短标题后重新编码并复核通过；一次临时抽帧 heredoc 解析错误和一次缺少 `jq` 仅影响 QA 命令，改用独立 FFmpeg/Python 后完成。

@@ -11185,6 +11185,39 @@ L15.19.3
 
 旧四格图保留为同目录 `all_strategies_contact_sheet_v2_4panel.png`。
 
+### S.2 V3 候选复用规划与论文视频（2026-07-16）
+
+S.1 的六格图只表示 Selection Pose。若要把同一候选实际送入 planner，可使用 wrapper 的新参数：
+
+~~~text
+--reuse_preview_candidate_group orientation
+--reuse_preview_candidate_group fused
+~~~
+
+默认仍为 `orientation`，所以旧命令不变。Orientation/Fused 使用 approach-axis preview summary；canonical Top-score 使用 score-only summary，并读取其中的 `fused` 组（该组权重为 `1.0 score + 0.0 orientation`）。完整模板和可运行命令见：
+
+~~~text
+/home/zaijia001/ssd/RoboTwin/agent-read/COMMANDS/piper_anygrasp_keyframes.zh.md
+L15.19.4
+~~~
+
+`pick_diverse_bottles/id0` 的隔离 planner 输出：
+
+~~~text
+/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v3_orientation_approach_20260716
+/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v3_fused_approach_20260716
+/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v3_topscore_canonical_20260716
+~~~
+
+论文视频输出：
+
+~~~text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v3_candidate_videos/candidate_retarget_grid_2x2.mp4
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v3_candidate_videos/pipeline_grid_4x5_v3_candidates.mp4
+~~~
+
+Orientation/Fused 两个关键帧选择相同，因此两段视频相同；Top-score 最后左臂 action miss `53.6 mm`。新 Top/Orientation/Fused 没有匹配的 Stage-2 repaint，4×5 中使用说明卡片，不能拿历史 repaint 冒充。
+
 ## T. OursV2 最小补充实验：GPT 关键帧提议与双臂轨迹碰撞检查
 
 本节的两个实验完全独立，只读取现有数据，不修改 OursV2 planner、人工关键帧 JSON 或原始轨迹。生成结果都在各自 `output/` 中，并由实验目录的 `.gitignore` 排除。

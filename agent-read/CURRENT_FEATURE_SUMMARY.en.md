@@ -7,6 +7,8 @@
 
 ## Added in this change
 
+- The `pick_diverse_bottles/id0` approach-axis Orientation, Fused, and canonical Top-score selections now have isolated planner replays. The wrapper accepts `--reuse_preview_candidate_group=orientation|fused` while retaining `orientation` as its default.
+- New paper assets include a 2x2 strategy-execution video and a 4x5 full-pipeline video with separate headers. Orientation/Fused succeed; Top-score has a `53.6 mm` left-arm action miss that is explicitly labeled. Historical Stage-2 repaints are not paired with the new candidates.
 - Planner targets, current readback, reach checks, and visualization all use `T_W_RTCP`.
 - SAPIEN `L6_SIM` and CuRobo/server `L6_URDF` share an origin but differ by exact local-axis `Ry(+pi/2)`. Adapted same-q FK error is below `7.5e-8 m / 0.000016 deg`.
 - The server tool remains literal `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`. Preview `CGRASP -> RTCP` remapping is a separate transform.

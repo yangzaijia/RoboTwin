@@ -996,3 +996,43 @@ bash /home/zaijia001/ssd/RoboTwin/code_painting/run_plan_keyframes_human_replay_
   --wrist_left_lateral_offset_m -0.0207 --wrist_right_lateral_offset_m 0.0274 \
   --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/L16_human_replay_clean
 ```
+
+## L15.19.4: Reuse V3 candidates for isolated planner videos
+
+`run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh` now accepts `--reuse_preview_candidate_group orientation|fused`. The default remains `orientation`, preserving old command behavior. The option only chooses which candidate group is read from an existing preview summary; it does not rerank candidates, modify OursV2, or overwrite old outputs.
+
+Parameter template (not directly runnable):
+
+```bash
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --tasks <TASK> --ids <ID> \
+  --preview_root <PREVIEW_ROOT> \
+  --reuse_preview_candidate_group <orientation|fused> \
+  --output_root <ISOLATED_OUTPUT_ROOT> \
+  --candidate_orientation_remap_label identity \
+  --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12
+```
+
+Runnable Orientation example:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --gpu 2 --tasks pick_diverse_bottles --ids 0 \
+  --preview_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3_full \
+  --reuse_preview_candidate_group orientation \
+  --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v3_orientation_approach_20260716 \
+  --candidate_orientation_remap_label identity \
+  --candidate_target_local_x_offset_m 0.0 --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12 \
+  --debug_gripper_actor_forward_axis local_z --visualize_targets \
+  --disable_execution_collisions --trajectory_mode cartesian_interp_ik \
+  --cartesian_auto_step_m 0.03 --execute_partial_cartesian_plan \
+  --allow_partial_dual_stage --reach_error_pose_source ee \
+  --ik_max_rotation_threshold_rad 3.14 --viewer_wait_at_end 0 --continue_on_error
+```
+
+Fused uses the same approach-axis summary with group `fused`. Canonical Top-score uses the score-only preview root `anygrasp_h2o_preview_d435_robot_frame_topscore_canonical_v3_full` and reuses its `fused` group because that summary's fused weights are `1.0 score + 0.0 orientation`.
+
+For `pick_diverse_bottles/id0`, Orientation/Fused use `L16/R5` at frame 38 and `L14/R16` at frame 78, and both executions succeed. Top-score uses `L0/R3` and `L0/R1`; its final left-arm action misses by `0.0536 m`. These are planner visualizations, not physical grasp-validity proofs.

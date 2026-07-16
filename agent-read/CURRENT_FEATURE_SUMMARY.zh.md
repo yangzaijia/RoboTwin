@@ -7,6 +7,8 @@
 
 ## 本轮新增
 
+- `pick_diverse_bottles/id0` 的 approach-axis Orientation、Fused 与 canonical Top-score 候选已复用到隔离 planner 输出；wrapper 新增 `--reuse_preview_candidate_group=orientation|fused`，默认仍为 `orientation`。
+- 新论文素材包含 2×2 策略执行视频和 4×5 完整链路视频，标题栏独立于画面。Orientation/Fused 执行成功；Top-score 左臂 action miss `53.6 mm`，在标题与 manifest 中如实标记。历史 Stage-2 repaint 未与新候选错配。
 - planner target、current readback、reach check 和可视化统一为 `T_W_RTCP`。
 - SAPIEN `L6_SIM` 与 CuRobo/server `L6_URDF` 原点一致、局部轴固定差精确 `Ry(+pi/2)`；适配后同-q FK 误差小于 `7.5e-8 m / 0.000016 deg`。
 - 服务器工具保持字面量 `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`。preview 的 `CGRASP -> RTCP` remap 是另一层独立变换。

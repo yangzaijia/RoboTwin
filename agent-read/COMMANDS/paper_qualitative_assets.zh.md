@@ -104,3 +104,27 @@ done
 ```
 
 正式结果应为：12 个 episode、152 张 640×576 单策略 PNG、38 张 1280×1152 contact sheet、12 个主视频和 10 个由现有 D435 PNG 派生的 AnyGrasp 视频。pine2 默认 `python3` 没有 OpenCV；候选图导出和图像验证必须直接使用上述 `RoboTwin_bw` Python。
+
+## `pick_diverse_bottles/id0` V3 候选复用视频
+
+六格候选图位于：
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/frame_000038/all_strategies_contact_sheet.png
+```
+
+对应候选已在不覆盖旧结果的前提下重新生成规划视频。新目录为：
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v3_candidate_videos/
+├── candidate_retarget_grid_2x2.mp4
+├── candidate_retarget_grid_2x2_config.json
+├── candidate_retarget_grid_2x2_manifest.json
+├── pipeline_grid_4x5_v3_candidates.mp4
+├── pipeline_grid_4x5_v3_candidates_config.json
+└── pipeline_grid_4x5_v3_candidates_manifest.json
+```
+
+2×2 为 Orientation/Fused/Top-score/OursV2。4×5 保留人类 RGB、HaMeR、inpainting、FoundationPose、Foundation replay、AnyGrasp、Dense V2、OursV2 与匹配的 OursV2 repaint。新 Top/Orientation/Fused 没有重新生成 Stage-2 repaint，因此相邻格使用说明卡片；旧 repaint 不会被错误配给新候选。
+
+方法视频按完整进度归一化到 21.4 秒：Orientation/Fused 原始 10.3 秒，Top-score 10.5 秒，OursV2 21.4 秒。输出均为 H.264、`yuv420p`、30 fps 并通过完整解码。Top-score 最后左臂 action miss `53.6 mm`，标题和 manifest 均明确标记。
