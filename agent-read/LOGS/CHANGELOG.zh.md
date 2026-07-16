@@ -3318,3 +3318,13 @@ Validation: compositor dry-run、JSON 解析、manifest layout 断言、ffprobe�
 - manifest 升级为 schema v2 和 `single_replay_background_combined_arms`；正式输出为 8 张 640x576 单图、2 张 1280x1152 contact sheet。旧双面板结果保存在 `outputs/keyframe_candidates_split_panels_v1/`。
 
 Validation: 隔离 smoke 与正式输出逐像素一致；8 张单图/2 张 contact sheet 的 schema、背景帧、左右候选编号、尺寸、OpenCV 读取和 FFmpeg 解码均通过。第 38 帧 Orientation/OursV2 单图完成视觉 QA，标题无裁切且左右 gripper 同图可见。超宽 contact sheet 的应用黑块预览再次经严格黑像素比例 0 确认为预览伪影。
+
+## 2026-07-16（论文素材扩展为 6 tasks × 2 episodes）
+
+- 新增 `paper_episode_batch_config.json` 和 `generate_paper_episode_batch.py`，固定选择 handover 1/3、pick 0/1、place 0/1、pnp_bread 7/8、pnp_tray 2/3、stack 0/1，并将图片/视频/config/manifest/README 聚合到同一 `<TASK>/id<ID>/`。
+- 候选图导出器改为按 metadata 动态处理 LEFT/RIGHT/BOTH；双手仍在同一 replay 背景，单手只画对应 gripper。缺少某策略/手记录时保留 `MISSING / NO SELECTION RECORD`，不伪造 pose。
+- episode 网格解析 17 类真实源，只从同 episode 的 D435 `grasp_result_*.png` 派生 AnyGrasp MP4，并复用独立标题栏 4×5 合成器。大型源视频只以绝对路径引用，不复制。
+- `place_bread_basket/id0,id1` 的 D435 AnyGrasp/human-guided preview、`pnp_tray/id2,id3` 的 Dense-v2/legacy repaint 如实显示为 `MISSING`，不混用旧广角、其他 episode 或 V1 raw。
+- 同步更新双语命令、摘要、环境、故障、决策、README、版本摘要及 paper module/executed-command 文档。
+
+Validation: 两个脚本本地 `py_compile`、配置 JSON、12-episode dry-run 和隔离 smoke 均通过。正式结果为 12 个 episode、38 个关键帧、152 张 640×576 单图、38 张 1280×1152 contact sheet、12 个 1920×1540/30 fps H.264-yuv420p 主视频和 10 个派生 AnyGrasp MP4。12 个主视频与 10 个派生视频全部完整解码；190 张 PNG 尺寸/非空、12 组 package 文件及所有 `available` 源路径审计通过。首次正式命令因解释器路径少了 `miniconda3/envs` 而在启动前退出 127，未改写正式目录；使用正确 Conda 路径后完成。

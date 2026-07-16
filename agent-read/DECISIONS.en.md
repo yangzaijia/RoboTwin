@@ -47,3 +47,10 @@
 - Paper candidate images draw only the Selection Pose recorded by V4 metadata. Planner offset, retreat, pregrasp, and TCP compensation are excluded so strategy selection is not conflated with downstream planning.
 - Use one requested-keyframe replay background per strategy/keyframe and overlay both grippers on it. Mark a dual-arm keyframe `BOTH`, and list LEFT/RIGHT candidate identities on the second header line. Local axes remain X red, Y green, Z blue.
 - The OursV2 point is a synthetic human-retarget target and must be labeled `HUMAN TARGET`; only Orientation/Fused/Top-score are AnyGrasp candidates.
+
+## 2026-07-16: group the 6×2 paper batch by episode
+
+- Fix the selection at handover 1/3, pick 0/1, place 0/1, pnp_bread 7/8, pnp_tray 2/3, and stack 0/1. Put each episode's keyframe images and 4×5 video in the same `<TASK>/id<ID>/` directory.
+- Derive image scope from V4 metadata: LEFT/RIGHT draw only that arm and BOTH draws both arms on one replay background. A missing strategy record is labeled `MISSING`; no default pose is invented.
+- Derive a D435 AnyGrasp video only from D435 PNGs for the same episode. Do not replace missing `place_bread_basket` D435 output with legacy wide-camera output, and do not present V1 or another episode as missing `pnp_tray` Dense-v2.
+- Record large source videos as absolute paths in configs/manifests. An episode package stores generated images, derived AnyGrasp, the composed video, and metadata rather than copying source videos.

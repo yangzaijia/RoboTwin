@@ -41,5 +41,6 @@
 ## 2026-07-16 paper qualitative asset addendum
 
 - The Dense URDF-match-v2 4x5 grid now places titles in separate 38 px headers. Video content remains 480x270 per cell, making the final output 1920x1540; the former title-overlay version is preserved separately.
-- Interaction keyframes 38/78 of `pick_diverse_bottles/id0` now have eight images across Orientation, Fused, Top-score, and OursV2, each drawing both grippers on one shared replay frame, plus two contact sheets. OursV2 is a `HUMAN TARGET`, not an AnyGrasp candidate; the former split-panel version is preserved separately.
+- Paper assets now cover 6 tasks × 2 episodes: 38 interaction keyframes produce 152 four-strategy images and 38 contact sheets. Each `<TASK>/id<ID>/` directory also contains its episode-specific 4×5 video, config, manifest, and README. LEFT/RIGHT/BOTH are drawn dynamically from keyframe metadata. OursV2 is a `HUMAN TARGET`, not an AnyGrasp candidate, and the old split-panel version remains separate.
+- All twelve 4×5 videos are H.264/yuv420p, 1920×1540, 30 fps, and full-decode clean. Genuine omissions remain `MISSING`: D435 AnyGrasp/human-filtered for `place_bread_basket/id0,id1`, and Dense-v2/legacy repaint for `pnp_tray/id2,id3`. Nothing is cross-paired or fabricated.
 - See `COMMANDS/paper_qualitative_assets.en.md` for reproduction and validation.

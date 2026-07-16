@@ -42,5 +42,6 @@ Selection Strategy Audit V4 only reads existing data and needs no GPU, SAPIEN, o
 ## Paper qualitative assets
 
 - The grid compositor uses pine2's system Python plus system `ffmpeg`/`ffprobe`; output must be H.264/`yuv420p`.
-- The keyframe-candidate exporter needs NumPy, SciPy, and OpenCV and must use `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`. The default `python3` on pine2 lacks `cv2`.
+- The keyframe-candidate exporter needs NumPy and OpenCV and must use `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`. The default `python3` on pine2 lacks `cv2`.
 - The asset root is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`; see `COMMANDS/paper_qualitative_assets.en.md`.
+- In the 6×2 batch, candidate images must use the `RoboTwin_bw` Python; `generate_paper_episode_batch.py` and 4×5 composition use system Python/FFmpeg. AnyGrasp MP4s are derived from existing D435 PNGs and require neither a GPU nor model inference.

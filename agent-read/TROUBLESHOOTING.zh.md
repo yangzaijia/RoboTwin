@@ -99,3 +99,14 @@
 
 - 先用 OpenCV 统计严格黑色像素，再用 FFmpeg 完整解码各单图和 contact sheet。
 - 本轮 frame 78 的源图、4 张单图和 contact sheet 严格黑色像素比例均为 0，且解码通过；黑块属于应用对超宽 PNG 的预览伪影，不是文件内容损坏。
+
+## 6×2 网格出现 `MISSING` 格
+
+- `place_bread_basket/id0,id1` 缺同版本 D435 AnyGrasp 与 human-guided preview；不要用旧广角结果补格。
+- `pnp_tray/id2,id3` 缺 Dense URDF-match-v2 raw 和对应 legacy repaint；不要从其他 episode 或 V1 raw 复制。
+- 查看 episode 下的 `pipeline_grid_4x5_manifest.json`；`available=false` 是如实记录，不是合成器崩溃。
+
+## 候选图正式生成提示 Python 路径不存在
+
+- 正确路径是 `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`，不是 `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`。
+- 路径检查失败发生在导出器启动前，不会改写正式输出目录；修正解释器后再运行 `--overwrite`。

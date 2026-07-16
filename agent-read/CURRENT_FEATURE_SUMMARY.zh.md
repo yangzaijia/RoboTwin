@@ -41,5 +41,6 @@
 ## 2026-07-16 论文定性素材补充
 
 - Dense URDF-match v2 的 4x5 网格已把标题移到每格独立的 38 px 顶栏；视频内容仍为 480x270，最终输出为 1920x1540，旧标题叠加版另行保留。
-- `pick_diverse_bottles/id0` 的交互关键帧 38/78 已导出 Orientation、Fused、Top-score、OursV2 共 8 张“单 replay 同图叠加左右 gripper”的图片和 2 张 contact sheet。OursV2 是 `HUMAN TARGET`，不是 AnyGrasp candidate；旧左右分栏版独立保留。
+- 论文素材已扩展为 6 tasks × 2 episodes：38 个交互关键帧导出 152 张四策略单图和 38 张 contact sheet；每个 `<TASK>/id<ID>/` 同目录还包含 episode 专属 4×5 视频、config、manifest 和 README。LEFT/RIGHT/BOTH 按关键帧 metadata 动态绘制，OursV2 是 `HUMAN TARGET`，不是 AnyGrasp candidate；旧左右分栏版独立保留。
+- 12 个 4×5 视频均为 H.264/yuv420p、1920×1540、30 fps 并通过完整解码。`place_bread_basket/id0,id1` 的 D435 AnyGrasp/human-filtered、`pnp_tray/id2,id3` 的 Dense-v2/legacy repaint 确实缺失，保留 `MISSING` 格而不混用或伪造。
 - 复现与验证命令见 `COMMANDS/paper_qualitative_assets.zh.md`。

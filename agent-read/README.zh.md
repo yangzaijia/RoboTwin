@@ -32,4 +32,4 @@ Real-control 输出速查见 `OUTPUTS_REAL_CONTROL_COMPARE_GUIDE.zh.md`。Canoni
 
 需要比较同一个 AnyGrasp/Human 语义源经过“原 Legacy/OursV2 输入适配”和“Canonical RTCP 输入适配”的效果时，使用 `run_ik_logic_grid.sh`。V2 输出 2×4 D435 视频，并审计源点、轴关系、每行 target contract 与 Canonical 19 cm link6 逆变换。旧 `outputs_ik_logic_grid_20260716` 的“同一数值 T_W_RTCP”V1 已确认输入语义错误，仅保留作反例。详见 `PIPER_IK_LOGIC_GRID_COMPARE.zh.md` 与 `COMMANDS/piper_ik_logic_grid.zh.md`。
 
-论文定性素材位于 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`。当前包含独立标题栏的 Dense-v2 4x5 网格，以及 `pick_diverse_bottles/id0` 第 38/78 帧的四策略单 replay 双 gripper 候选图；复现命令见 `agent-read/COMMANDS/paper_qualitative_assets.zh.md`。
+论文定性素材位于 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`。当前按 `<TASK>/id<ID>/` 聚合 6 tasks × 2 episodes 的四策略关键帧图片和 episode 专属 4×5 网格：共 152 张单图、38 张 contact sheet、12 个 H.264 主视频；真实缺失阶段保留 `MISSING`，不跨相机/版本替换。复现命令见 `agent-read/COMMANDS/paper_qualitative_assets.zh.md`。

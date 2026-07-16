@@ -42,5 +42,6 @@ Selection Strategy Audit V4 只读取已有数据，不需要 GPU、SAPIEN 或 p
 ## 论文定性素材
 
 - 网格合成器使用 pine2 系统 Python，以及系统 `ffmpeg`/`ffprobe`；输出要求 H.264、`yuv420p`。
-- 关键帧候选图导出器需要 NumPy、SciPy 和 OpenCV，必须使用 `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`。pine2 默认 `python3` 缺少 `cv2`。
+- 关键帧候选图导出器需要 NumPy 和 OpenCV，必须使用 `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`。pine2 默认 `python3` 缺少 `cv2`。
 - 素材根目录为 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`，命令见 `COMMANDS/paper_qualitative_assets.zh.md`。
+- 6×2 批次中，候选图必须由 `RoboTwin_bw` Python 生成；`generate_paper_episode_batch.py` 与 4×5 合成使用系统 Python/FFmpeg。AnyGrasp MP4 只从已有 D435 PNG 派生，不需要 GPU 或模型推理。

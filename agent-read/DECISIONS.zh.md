@@ -47,3 +47,10 @@
 - 论文候选图只画 V4 metadata 中的 Selection Pose，排除 planner offset、retreat、pregrasp 和 TCP compensation，避免把选择策略与后续规划混在一起。
 - 同一关键帧/策略只使用一张 requested-keyframe replay 背景，左右 gripper 同图叠加；双手关键帧在总标题标为 `BOTH`，标题第二行分别列 LEFT/RIGHT 候选。局部轴固定使用 X 红、Y 绿、Z 蓝。
 - OursV2 的点来自 synthetic human-retarget target，必须标为 `HUMAN TARGET`；Orientation/Fused/Top-score 才标 AnyGrasp candidate。
+
+## 2026-07-16：论文素材采用 6×2 episode 聚合目录
+
+- 固定选择 handover 1/3、pick 0/1、place 0/1、pnp_bread 7/8、pnp_tray 2/3、stack 0/1；每个 episode 的关键帧图和 4×5 视频放在同一 `<TASK>/id<ID>/`。
+- 图片 scope 由 V4 metadata 决定：LEFT/RIGHT 只画对应手，BOTH 在同一 replay 背景画双手；缺少策略记录时显示 `MISSING`，不补默认 pose。
+- D435 AnyGrasp 视频只能从同 episode 的 D435 PNG 派生。`place_bread_basket` 缺 D435 结果时不替换旧广角结果；`pnp_tray` 缺 Dense-v2 时不以 V1 或其他 episode 冒充。
+- 大型源视频只在 config/manifest 中记录绝对路径；episode 包只保存生成的图、派生 AnyGrasp、合成视频和元数据，不复制源视频。

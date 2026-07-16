@@ -1,77 +1,106 @@
-# Paper Qualitative Assets: Separate Headers and Keyframe Candidates
+# Paper Qualitative Assets: 6×2 Episode Images and 4×5 Videos
 
 ## Purpose
 
-Maintain the paper video grid and keyframe-candidate images under `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`. Both tools only read existing videos, Foundation images, and Selection Strategy Audit V4 metadata. They do not run IK, modify OursV2, or overwrite source data.
+Maintain the paper video grids and keyframe-candidate images under `/home/zaijia001/ssd/data/piper/paper_qualitative_assets`. The tools only read existing videos, Foundation/AnyGrasp images, and Selection Strategy Audit V4 metadata. They do not run IK, modify OursV2, or overwrite source data.
+
+Formal outputs are grouped by episode:
+
+```text
+outputs/keyframe_candidates/<TASK>/id<ID>/
+├── frame_<FRAME>/
+│   ├── 01_orientation_<left|right|both>.png
+│   ├── 02_fused_<left|right|both>.png
+│   ├── 03_top_score_<left|right|both>.png
+│   ├── 04_oursv2_<left|right|both>.png
+│   └── all_strategies_contact_sheet.png
+├── _derived/06_anygrasp_candidates.mp4   # only when D435 PNGs exist
+├── pipeline_grid_4x5.mp4
+├── pipeline_grid_4x5_config.json
+├── pipeline_grid_4x5_manifest.json
+└── README.md
+```
 
 ## Parameter template (not directly runnable)
-
-Specify the episode and keyframes in JSON instead of hard-coding paths in Python:
 
 ```json
 {
   "metadata_root": "<SELECTION_STRATEGY_COMPARE_V4>",
   "output_root": "<PAPER_ASSET_ROOT>/outputs/keyframe_candidates",
+  "base_grid_config": "<PAPER_ASSET_ROOT>/pipeline_grid_expanded_dense_urdfmatch_v2_config.json",
   "strategies": ["orientation", "fused", "top_score", "oursv2"],
-  "episodes": [{"task": "<TASK>", "id": 0, "keyframes": [38, 78]}]
+  "episodes": [{"task": "<TASK>", "id": 0, "keyframes": [38, 78]}],
+  "allow_missing": true
 }
 ```
 
-## Runnable: video grid with separate headers
+## Current 6×2 selection
 
-```bash
-cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
-python3 compose_pipeline_grid.py \
-  --config pipeline_grid_expanded_dense_urdfmatch_v2_config.json --dry-run
-python3 compose_pipeline_grid.py \
-  --config pipeline_grid_expanded_dense_urdfmatch_v2_config.json
-```
+| Task | Episodes | Keyframes |
+|---|---:|---|
+| handover_bottle | 1, 3 | 39/80/103; 23/44/57 |
+| pick_diverse_bottles | 0, 1 | 38/78; 46/79 |
+| place_bread_basket | 0, 1 | 34/64/103/119; 32/52/79/85 |
+| pnp_bread | 7, 8 | 32/80/83/108; 32/49/50/74 |
+| pnp_tray | 2, 3 | 52/83; 29/59 |
+| stack_cups | 0, 1 | 51/106/139/195; 40/45/84/141 |
 
-The current config preserves `480x270` video content per cell and adds a separate `38 px` header above it. Each complete cell is `480x308`, so the 4x5 output is `1920x1540`. The former title-overlay version is preserved as `outputs/pipeline_grid_expanded_dense_urdfmatch_v2_title_overlay_v1.mp4`.
+## Runnable commands
 
-## Runnable: keyframe candidate images
+Dry-run first; this only probes paths, metadata, and video properties:
 
 ```bash
 cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
 /home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10 \
   export_keyframe_candidate_images.py \
-  --config keyframe_candidate_config.json --dry-run
-/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10 \
-  export_keyframe_candidate_images.py \
-  --config keyframe_candidate_config.json --overwrite
+  --config paper_episode_batch_config.json --dry-run
+python3 generate_paper_episode_batch.py \
+  --config paper_episode_batch_config.json --dry-run
 ```
 
-Each strategy PNG uses exactly one requested-keyframe replay background and draws both left and right gripper Selection Poses on that same image; it is no longer split into panels. A dual-arm event is marked `BOTH`, and the second header line lists the LEFT/RIGHT candidate identities. Axes follow `X=red, Y=green, Z=blue`. Orientation/Fused/Top-score display the selected AnyGrasp candidate. OursV2 displays a synthetic human-retarget target and is explicitly labeled `HUMAN TARGET`; it must not be described as an AnyGrasp candidate. The former split-panel version is preserved under `outputs/keyframe_candidates_split_panels_v1/`.
+Formal rebuild:
 
-For an isolated layout check, add `--output-root <SMOKE_DIR>`; omitting it retains the formal config output root.
+```bash
+cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
+/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10 \
+  export_keyframe_candidate_images.py \
+  --config paper_episode_batch_config.json --overwrite
+python3 generate_paper_episode_batch.py \
+  --config paper_episode_batch_config.json --overwrite
+```
+
+Use candidate exporter's `--output-root <SMOKE_DIR>` for isolated image checks. For the video generator, use `--only <TASK>:<ID> --output-root <SMOKE_DIR>` for an isolated episode and `--skip-existing` for batch resume. Its `--require-complete` fails when any source stage is absent. The formal config uses `allow_missing=true` so genuine omissions remain explicit `MISSING` tiles.
+
+## Image semantics
+
+- Each strategy/keyframe uses one requested-keyframe Foundation replay background.
+- LEFT/RIGHT events draw only the corresponding gripper. BOTH events draw both grippers on one image, never split panels.
+- A missing arm/strategy metadata record is labeled `MISSING / NO SELECTION RECORD`; no pose is fabricated.
+- Local axes are always `X=red, Y=green, Z=blue`.
+- Orientation/Fused/Top-score show a selected AnyGrasp candidate. OursV2 shows a synthetic human-retarget target labeled `HUMAN TARGET`.
+- The old split-panel export remains under `outputs/keyframe_candidates_split_panels_v1/`.
+
+## Video semantics and genuine missing inputs
+
+- Every 4×5 video is H.264, `yuv420p`, 1920×1540, and 30 fps. Each cell preserves 480×270 content below a separate 38 px header.
+- The episode target duration is the longer of Foundation replay and OursV2. Each stream is normalized over its full progress and freezes its final frame.
+- AnyGrasp MP4s are derived only from existing D435 `grasp_result_*.png`; inference is not rerun.
+- `place_bread_basket/id0,id1` lack D435 AnyGrasp and human-guided preview. The cells are `MISSING`; legacy wide-camera results are not substituted.
+- `pnp_tray/id2,id3` lack Dense URDF-match-v2 raw and the adjacent legacy Dense repaint. The cells are `MISSING`; Dense results are not fabricated.
+- The other eight episodes have all 17 video-source stages.
 
 ## Validation
 
 ```bash
 cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
-python3 -m json.tool outputs/pipeline_grid_expanded_dense_urdfmatch_v2_manifest.json >/dev/null
-ffprobe -v error -select_streams v:0 \
-  -show_entries 'stream=codec_name,width,height,pix_fmt,avg_frame_rate,nb_frames:format=duration,size' \
-  -of json outputs/pipeline_grid_expanded_dense_urdfmatch_v2.mp4
-ffmpeg -hide_banner -v error \
-  -i outputs/pipeline_grid_expanded_dense_urdfmatch_v2.mp4 -f null -
-/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10 - <<'PY'
-import cv2, json
-from pathlib import Path
-d = json.loads(Path('outputs/keyframe_candidates/manifest.json').read_text())
-assert d['schema_version'] == 2
-assert d['layout'] == 'single_replay_background_combined_arms'
-assert len(d['individual_images']) == 8
-assert len(d['contact_sheets']) == 2
-for item in d['individual_images']:
-    image = cv2.imread(item['output'])
-    assert list(image.shape) == item['image_shape'] == [576, 640, 3]
-    assert item['layout'] == d['layout']
-    assert item['background_frame'] == item['keyframe']
-for item in d['contact_sheets']:
-    assert list(cv2.imread(item['output']).shape) == item['image_shape'] == [1152, 1280, 3]
-print('candidate images:', len(d['individual_images']))
-PY
+python3 -m json.tool outputs/keyframe_candidates/manifest.json >/dev/null
+python3 -m json.tool outputs/keyframe_candidates/episode_batch_manifest.json >/dev/null
+find outputs/keyframe_candidates -name pipeline_grid_4x5.mp4 -print0 | \
+  xargs -0 -n1 ffprobe -v error -select_streams v:0 \
+  -show_entries 'stream=codec_name,width,height,pix_fmt,r_frame_rate,nb_frames:format=duration,size' -of json
+for video in outputs/keyframe_candidates/*/id*/pipeline_grid_4x5.mp4; do
+  ffmpeg -v error -i "$video" -f null -
+done
 ```
 
-The default `python3` on pine2 has no OpenCV. Use the `RoboTwin_bw` Python directly for candidate export and image validation.
+The formal result contains 12 episodes, 152 640×576 strategy PNGs, 38 1280×1152 contact sheets, 12 primary videos, and 10 AnyGrasp MP4s derived from existing D435 PNGs. Pine2's default `python3` lacks OpenCV, so candidate export and image validation must use the `RoboTwin_bw` Python shown above.

@@ -3320,3 +3320,13 @@ Validation: compositor dry-run, JSON parsing, manifest-layout assertions, ffprob
 - The manifest is schema v2 with `single_replay_background_combined_arms`. Formal outputs are eight 640x576 individual images and two 1280x1152 contact sheets. The former split-panel result is preserved under `outputs/keyframe_candidates_split_panels_v1/`.
 
 Validation: isolated smoke and formal outputs are pixel-identical. Schema, background frames, left/right candidate IDs, dimensions, OpenCV reads, and FFmpeg decode pass for all eight images and two contact sheets. Frame-38 Orientation/OursV2 individual images pass visual QA with unclipped headers and both grippers visible. The app's wide-contact-sheet black-block preview again has a measured strict-black-pixel ratio of zero and remains a preview artifact.
+
+## 2026-07-16 (Paper assets expanded to 6 tasks × 2 episodes)
+
+- Added `paper_episode_batch_config.json` and `generate_paper_episode_batch.py`, fixing the selection at handover 1/3, pick 0/1, place 0/1, pnp_bread 7/8, pnp_tray 2/3, and stack 0/1. Images, video, config, manifest, and README are grouped under the same `<TASK>/id<ID>/`.
+- The candidate exporter now follows metadata-driven LEFT/RIGHT/BOTH scope. Both arms still share one replay background; a single-arm event draws only that gripper. A missing strategy/arm record remains `MISSING / NO SELECTION RECORD`; no pose is fabricated.
+- The episode grid resolves 17 real source categories, derives AnyGrasp MP4 only from same-episode D435 `grasp_result_*.png`, and reuses the separate-header 4×5 compositor. Large source videos are referenced by absolute path rather than copied.
+- D435 AnyGrasp/human-guided preview for `place_bread_basket/id0,id1` and Dense-v2/legacy repaint for `pnp_tray/id2,id3` remain honest `MISSING` cells. Legacy wide camera, another episode, and V1 raw are never substituted.
+- Synchronized bilingual command, summary, environment, troubleshooting, decision, README, version, paper-module, and executed-command documentation.
+
+Validation: local `py_compile`, config JSON, all-12-episode dry-runs, and isolated smoke passed. Formal output contains 12 episodes, 38 keyframes, 152 640×576 individual images, 38 1280×1152 contact sheets, twelve 1920×1540/30-fps H.264-yuv420p primary videos, and ten derived AnyGrasp MP4s. All 12 primary and 10 derived videos fully decode; all 190 PNGs pass size/nonempty checks; 12 complete package file sets and every `available` source path pass audit. The first formal command used an interpreter path missing `miniconda3/envs` and exited 127 before startup without rewriting formal output; the corrected Conda path completed.

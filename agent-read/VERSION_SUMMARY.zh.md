@@ -84,4 +84,4 @@ O.2 是 O.1.2 Foundation IK 的任务扩展，不改变 V1-V4 IK 语义。新增
 
 ### 2026-07-16：Paper qualitative assets v1.x 增量
 
-不改变任何方法或 IK 版本。Dense-v2 论文网格把标题从视频画面内移到 38 px 独立顶栏，旧版保留；JSON 驱动的关键帧候选图导出器当前为 `pick_diverse_bottles/id0` 的 38/78 帧输出四策略、单 replay 同图双 gripper 的 8 张单图和 2 张 contact sheet。旧左右分栏版本独立保留。
+不改变任何方法或 IK 版本。Dense-v2 论文网格把标题从视频画面内移到 38 px 独立顶栏，旧版保留；JSON 驱动工具已扩展为 6 tasks × 2 episodes。38 个交互关键帧输出 152 张四策略单图和 38 张 contact sheet，每个 episode 同目录生成独立 4×5 视频/config/manifest/README。单/双手 scope 来自 metadata；缺失候选或源视频显式标 `MISSING`，不伪造、不跨相机版本替换。旧左右分栏版本独立保留。

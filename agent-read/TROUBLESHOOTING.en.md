@@ -99,3 +99,14 @@
 
 - First measure strict-black pixels with OpenCV, then fully decode each individual image and contact sheet with FFmpeg.
 - In this run, the frame-78 source, all four individual images, and the contact sheet had a zero strict-black-pixel ratio and decoded successfully. The blocks are an app preview artifact for the wide PNG, not file corruption.
+
+## A 6×2 grid contains `MISSING` cells
+
+- `place_bread_basket/id0,id1` lack matched D435 AnyGrasp and human-guided previews. Do not fill the cells with legacy wide-camera results.
+- `pnp_tray/id2,id3` lack Dense URDF-match-v2 raw and the corresponding legacy repaint. Do not copy another episode or V1 raw output.
+- Inspect `pipeline_grid_4x5_manifest.json` in the episode directory. `available=false` is an honest source audit, not a compositor crash.
+
+## Formal candidate generation reports that the Python path is absent
+
+- The correct path is `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`, not `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`.
+- This path check fails before the exporter starts and therefore does not rewrite the formal output. Correct the interpreter and rerun with `--overwrite`.
