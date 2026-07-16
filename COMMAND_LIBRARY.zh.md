@@ -11158,6 +11158,33 @@ rclone:
 gdrive:piper/multi/6task/robot_graspnet_piper0515
 ~~~
 
+### S.1 修正：human/AnyGrasp 朝向评分与论文六格图（2026-07-16）
+
+旧 Orientation 使用完整 SO(3) 距离，会把平行两指夹爪绕前进轴 180 度后的指爪互换误判为接近 180 度的朝向错误。新预览参数为：
+
+~~~text
+--orientation_metric so3
+--orientation_metric parallel_jaw_symmetry
+--orientation_metric approach_axis
+~~~
+
+其中 `parallel_jaw_symmetry` 使用 `min(d(R_h,R_c), d(R_h,R_c @ Rz(pi)))`；`approach_axis` 只比较 canonical local `+Z` 前进轴并完全忽略 roll。本次论文素材使用 `approach_axis`，旧默认 `so3` 保留用于复现。
+
+完整可运行命令与字段说明见：
+
+~~~text
+/home/zaijia001/ssd/RoboTwin/agent-read/COMMANDS/piper_anygrasp_keyframes.zh.md
+L15.19.3
+~~~
+
+已验证 `pick_diverse_bottles/id0/frame38`：Orientation/Fused 从右手 `#11` 修正为 `#5`，左手保持 `#16`；Top-score 保持左 `#0`、右 `#3`。六格论文图包含 dense candidates、四个单策略与 all-method overlay：
+
+~~~text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/frame_000038/all_strategies_contact_sheet.png
+~~~
+
+旧四格图保留为同目录 `all_strategies_contact_sheet_v2_4panel.png`。
+
 ## T. OursV2 最小补充实验：GPT 关键帧提议与双臂轨迹碰撞检查
 
 本节的两个实验完全独立，只读取现有数据，不修改 OursV2 planner、人工关键帧 JSON 或原始轨迹。生成结果都在各自 `output/` 中，并由实验目录的 `.gitignore` 排除。

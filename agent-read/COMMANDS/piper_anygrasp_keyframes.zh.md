@@ -577,6 +577,65 @@ bash /home/zaijia001/ssd/RoboTwin/code_painting/run_plan_anygrasp_keyframes_pipe
 bash /home/zaijia001/ssd/RoboTwin/code_painting/run_plan_anygrasp_keyframes_piper_d435_robot_frame_six_tasks.sh --gpu 2 --ids 0 1 2 3 4 --continue_on_error --viewer --tasks pick_diverse_bottles place_bread_basket stack_cups handover_bottle pnp_bread pnp_tray --visualize_targets --disable_execution_collisions --trajectory_mode cartesian_interp_ik --cartesian_auto_step_m 0.03 --execute_partial_cartesian_plan --allow_partial_dual_stage --print_pose_every 5 --reach_error_pose_source ee --ik_max_rotation_threshold_rad 3.14 --viewer_wait_at_end 0 --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/viewer_gripper
 ```
 
+### L15.19.3 平行夹爪对称与 approach-axis 朝向度量（2026-07-16）
+
+`render_anygrasp_ranked_preview.py` 的 `--orientation_metric` 支持三种模式：
+
+- `so3`：旧版完整 SO(3) 测地距离；保留为默认值，用于复现旧结果。
+- `parallel_jaw_symmetry`：计算 `min(d(R_h,R_c), d(R_h,R_c @ Rz(pi)))`。在 canonical robot frame 中 local `+Z` 是前进轴，因此绕 local `+Z` 旋转 180 度的两指互换被视为等价；其他 roll 仍计入误差。
+- `approach_axis`：只计算 human/candidate 的有向 local `+Z` 前进轴夹角，完全忽略绕该轴的 roll。本次论文六格图使用此模式。
+
+三种数值都会写入每个 summary candidate：`so3_rotation_distance_deg`、`parallel_jaw_symmetry_distance_deg`、`approach_axis_distance_deg`。`rotation_distance_deg` 表示当前 `orientation_metric` 真正用于过滤和排序的数值。
+
+非可运行参数模板：
+
+```bash
+python code_painting/render_anygrasp_ranked_preview.py \
+  --anygrasp_dir <ANYGRASP_EPISODE_DIR> \
+  --replay_dir <FOUNDATION_REPLAY_EPISODE_DIR> \
+  --hand_npz <HAND_DETECTIONS_NPZ> \
+  --output_dir <NEW_OUTPUT_DIR> \
+  --frames <FRAME_IDS...> \
+  --candidate_frame_mode robot_replay \
+  --orientation_metric <so3|parallel_jaw_symmetry|approach_axis> \
+  --max_rotation_distance_deg <THRESHOLD>
+```
+
+已运行的 `pick_diverse_bottles/id0/frame38` 示例：
+
+```bash
+source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+conda activate RoboTwin_bw
+cd /home/zaijia001/ssd/RoboTwin
+python code_painting/render_anygrasp_ranked_preview.py \
+  --anygrasp_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/pick_diverse_bottles_output/foundation_input_0 \
+  --replay_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/foundation_replay_d435/foundation_input_0 \
+  --hand_npz /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/harmer_output/hand_detections_0.npz \
+  --output_dir /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3/pick_diverse_bottles/foundation_input_0 \
+  --frames 38 --top_k 20 \
+  --left_target_object left_bottle --right_target_object right_bottle \
+  --anygrasp_score_weight 0.25 --orientation_score_weight 0.75 \
+  --max_rotation_distance_deg 90 --orientation_metric approach_axis \
+  --draw_object_overlay 1 --draw_hand_reference 1 --debug_dump_object_distances 1 \
+  --camera_cv_axis_mode legacy_r1 --candidate_frame_mode robot_replay \
+  --candidate_target_local_z_offset_m -0.05 \
+  --base_image_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/foundation_replay_d435/foundation_input_0/head_anygrasp_frames \
+  --base_image_mode raw
+```
+
+结果：左手 Orientation/Fused 选择 `#16`；右手选择 `#5`。旧右手 Top-score `#3` 的完整 SO(3) 误差为 `164.045°`，但 symmetry/approach 误差分别为 `60.866°/58.306°`，不再被错误当作接近 180 度的反向抓取。右手 `#5` 的 approach 误差更小（`51.795°`），因此仍排在 `#3` 前。
+
+论文六格导出器位于数据素材目录，不在 RoboTwin Git 内：
+
+```bash
+cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
+python export_keyframe_candidate_comparison_v3.py \
+  --config keyframe_candidate_comparison_v3_config.json \
+  --overwrite --publish
+```
+
+六格依次为 canonical dense candidates、Orientation、Fused、Top-score、OursV2、四策略 canonical selection overlay。V3 选择图不包含 planner 的 `-0.05 m` offset、pregrasp、retreat 或 TCP compensation。旧四格备份为 `all_strategies_contact_sheet_v2_4panel.png`。
+
 ## O. 第一帧 FoundationPose 直接策略抓取对照
 
 ### O.0 Piper/Pika 数据生成与 IK 诊断命令

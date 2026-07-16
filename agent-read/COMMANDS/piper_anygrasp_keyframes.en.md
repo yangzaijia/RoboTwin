@@ -577,6 +577,65 @@ All six tasks with the same id set:
 bash /home/zaijia001/ssd/RoboTwin/code_painting/run_plan_anygrasp_keyframes_piper_d435_robot_frame_six_tasks.sh --gpu 2 --ids 0 1 2 3 4 --continue_on_error --viewer --tasks pick_diverse_bottles place_bread_basket stack_cups handover_bottle pnp_bread pnp_tray --visualize_targets --disable_execution_collisions --trajectory_mode cartesian_interp_ik --cartesian_auto_step_m 0.03 --execute_partial_cartesian_plan --allow_partial_dual_stage --print_pose_every 5 --reach_error_pose_source ee --ik_max_rotation_threshold_rad 3.14 --viewer_wait_at_end 0 --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/viewer_gripper
 ```
 
+### L15.19.3 Parallel-jaw symmetry and approach-axis orientation metrics (2026-07-16)
+
+`render_anygrasp_ranked_preview.py --orientation_metric` now supports three modes:
+
+- `so3`: the legacy full SO(3) geodesic distance. It remains the default for reproducing old results.
+- `parallel_jaw_symmetry`: `min(d(R_h,R_c), d(R_h,R_c @ Rz(pi)))`. Canonical local `+Z` is the approach axis, so a 180-degree finger swap around local `+Z` is equivalent while other roll remains measurable.
+- `approach_axis`: compares only the directed human/candidate local `+Z` approach axes and completely ignores roll. The new six-panel paper asset uses this mode.
+
+Every summary candidate records all three values as `so3_rotation_distance_deg`, `parallel_jaw_symmetry_distance_deg`, and `approach_axis_distance_deg`. `rotation_distance_deg` is the active metric used for filtering and ranking.
+
+Non-runnable parameter template:
+
+```bash
+python code_painting/render_anygrasp_ranked_preview.py \
+  --anygrasp_dir <ANYGRASP_EPISODE_DIR> \
+  --replay_dir <FOUNDATION_REPLAY_EPISODE_DIR> \
+  --hand_npz <HAND_DETECTIONS_NPZ> \
+  --output_dir <NEW_OUTPUT_DIR> \
+  --frames <FRAME_IDS...> \
+  --candidate_frame_mode robot_replay \
+  --orientation_metric <so3|parallel_jaw_symmetry|approach_axis> \
+  --max_rotation_distance_deg <THRESHOLD>
+```
+
+Executed `pick_diverse_bottles/id0/frame38` example:
+
+```bash
+source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+conda activate RoboTwin_bw
+cd /home/zaijia001/ssd/RoboTwin
+python code_painting/render_anygrasp_ranked_preview.py \
+  --anygrasp_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/pick_diverse_bottles_output/foundation_input_0 \
+  --replay_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/foundation_replay_d435/foundation_input_0 \
+  --hand_npz /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/harmer_output/hand_detections_0.npz \
+  --output_dir /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3/pick_diverse_bottles/foundation_input_0 \
+  --frames 38 --top_k 20 \
+  --left_target_object left_bottle --right_target_object right_bottle \
+  --anygrasp_score_weight 0.25 --orientation_score_weight 0.75 \
+  --max_rotation_distance_deg 90 --orientation_metric approach_axis \
+  --draw_object_overlay 1 --draw_hand_reference 1 --debug_dump_object_distances 1 \
+  --camera_cv_axis_mode legacy_r1 --candidate_frame_mode robot_replay \
+  --candidate_target_local_z_offset_m -0.05 \
+  --base_image_dir /home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles/foundation_replay_d435/foundation_input_0/head_anygrasp_frames \
+  --base_image_mode raw
+```
+
+Result: Orientation/Fused select `#16` for the left arm and `#5` for the right arm. The old right Top-score `#3` has a full-SO(3) error of `164.045 deg`, but symmetry/approach errors of only `60.866/58.306 deg`, so it is no longer rejected as a nearly 180-degree reversed grasp. Right `#5` still ranks first because its approach error is lower (`51.795 deg`).
+
+The six-panel paper exporter lives in the data-asset directory outside RoboTwin Git:
+
+```bash
+cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
+python export_keyframe_candidate_comparison_v3.py \
+  --config keyframe_candidate_comparison_v3_config.json \
+  --overwrite --publish
+```
+
+The panels are canonical dense candidates, Orientation, Fused, Top-score, OursV2, and a four-strategy canonical-selection overlay. V3 selection images exclude planner `-0.05 m` offset, pregrasp, retreat, and TCP compensation. The previous four-panel sheet is preserved as `all_strategies_contact_sheet_v2_4panel.png`.
+
 ## O. First-Frame FoundationPose Direct Strategy Baseline
 
 ### O.0 Piper/Pika Data Generation And IK Diagnostic Commands

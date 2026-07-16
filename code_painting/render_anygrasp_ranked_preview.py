@@ -46,6 +46,10 @@ class CandidateRecord:
     fused_score: float
     rotation_distance_deg: float
     raw_rotation_distance_deg: float
+    so3_rotation_distance_deg: float
+    parallel_jaw_symmetry_distance_deg: float
+    approach_axis_distance_deg: float
+    orientation_metric: str
     translation: np.ndarray
     rotation_matrix: np.ndarray
     visual_translation: np.ndarray
@@ -110,6 +114,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--anygrasp_score_weight", type=float, default=0.5)
     parser.add_argument("--orientation_score_weight", type=float, default=0.5)
     parser.add_argument("--max_rotation_distance_deg", type=float, default=90.0, help="If >= 0, drop arm-specific candidates whose hand-orientation rotation distance exceeds this threshold.")
+    parser.add_argument(
+        "--orientation_metric",
+        choices=["so3", "parallel_jaw_symmetry", "approach_axis"],
+        default="so3",
+        help=(
+            "Metric used for filtering and orientation/fused ranking. so3 reproduces the legacy result; "
+            "parallel_jaw_symmetry treats a 180-degree finger swap around the approach axis as equivalent; "
+            "approach_axis compares only the directed gripper-forward axis and ignores roll."
+        ),
+    )
     parser.add_argument("--draw_object_overlay", type=int, default=0, help="If 1, overlay replay object center markers and labels in staged mode.")
     parser.add_argument("--draw_hand_reference", type=int, default=1, help="If 1, overlay the reference human-hand gripper pose using a distinct color.")
     parser.add_argument("--debug_dump_object_distances", type=int, default=0, help="If 1, dump per-candidate distances to every visible object in staged mode.")
@@ -389,6 +403,48 @@ def rotation_distance_deg(rot_a: np.ndarray, rot_b: np.ndarray) -> float:
     trace_value = float(np.trace(rot_a.T @ rot_b))
     cos_theta = np.clip((trace_value - 1.0) * 0.5, -1.0, 1.0)
     return float(np.degrees(np.arccos(cos_theta)))
+
+
+def approach_axis_distance_deg(rot_a: np.ndarray, rot_b: np.ndarray, approach_axis_index: int) -> float:
+    """Directed angle between the two gripper approach axes."""
+    rot_a = np.asarray(rot_a, dtype=np.float64).reshape(3, 3)
+    rot_b = np.asarray(rot_b, dtype=np.float64).reshape(3, 3)
+    axis_a = rot_a[:, int(approach_axis_index)]
+    axis_b = rot_b[:, int(approach_axis_index)]
+    cos_theta = np.clip(float(np.dot(axis_a, axis_b)), -1.0, 1.0)
+    return float(np.degrees(np.arccos(cos_theta)))
+
+
+def parallel_jaw_symmetry_distance_deg(
+    rot_a: np.ndarray,
+    rot_b: np.ndarray,
+    approach_axis_index: int,
+) -> float:
+    """SO(3) distance modulo the 180-degree symmetry of a parallel-jaw gripper."""
+    if int(approach_axis_index) == 0:
+        finger_swap = np.diag([1.0, -1.0, -1.0])
+    elif int(approach_axis_index) == 2:
+        finger_swap = np.diag([-1.0, -1.0, 1.0])
+    else:
+        raise ValueError(f"Unsupported approach_axis_index={approach_axis_index}; expected 0 or 2")
+    return min(
+        rotation_distance_deg(rot_a, rot_b),
+        rotation_distance_deg(rot_a, np.asarray(rot_b, dtype=np.float64).reshape(3, 3) @ finger_swap),
+    )
+
+
+def orientation_distances_deg(
+    rot_a: np.ndarray,
+    rot_b: np.ndarray,
+    approach_axis_index: int,
+) -> Dict[str, float]:
+    return {
+        "so3": rotation_distance_deg(rot_a, rot_b),
+        "parallel_jaw_symmetry": parallel_jaw_symmetry_distance_deg(
+            rot_a, rot_b, approach_axis_index
+        ),
+        "approach_axis": approach_axis_distance_deg(rot_a, rot_b, approach_axis_index),
+    }
 
 
 def orientation_score_from_rotation_distance(rotation_distance: float) -> float:
@@ -761,6 +817,8 @@ def build_candidates_for_arm(
     anygrasp_score_weight: float,
     orientation_score_weight: float,
     max_rotation_distance_deg: float,
+    orientation_metric: str,
+    approach_axis_index: int,
 ) -> Tuple[List[CandidateRecord], int, int]:
     ref_frame = int(hand_reference.ref_frame)
     ref_rot_raw = np.asarray(hand_reference.rotation_matrix, dtype=np.float64).reshape(3, 3)
@@ -773,7 +831,12 @@ def build_candidates_for_arm(
             continue
         target_object_candidates += 1
         raw_rotation_distance = rotation_distance_deg(ref_rot_raw, candidate.rotation_matrix)
-        rotation_distance = rotation_distance_deg(ref_rot, candidate.rotation_matrix)
+        distances = orientation_distances_deg(
+            ref_rot,
+            candidate.rotation_matrix,
+            approach_axis_index,
+        )
+        rotation_distance = float(distances[str(orientation_metric)])
         if float(max_rotation_distance_deg) >= 0.0 and float(rotation_distance) > float(max_rotation_distance_deg):
             continue
         orientation_score = orientation_score_from_rotation_distance(rotation_distance)
@@ -786,6 +849,10 @@ def build_candidates_for_arm(
                 fused_score=fused_score,
                 rotation_distance_deg=rotation_distance,
                 raw_rotation_distance_deg=raw_rotation_distance,
+                so3_rotation_distance_deg=float(distances["so3"]),
+                parallel_jaw_symmetry_distance_deg=float(distances["parallel_jaw_symmetry"]),
+                approach_axis_distance_deg=float(distances["approach_axis"]),
+                orientation_metric=str(orientation_metric),
                 translation=np.asarray(candidate.translation, dtype=np.float64).reshape(3),
                 rotation_matrix=np.asarray(candidate.rotation_matrix, dtype=np.float64).reshape(3, 3),
                 visual_translation=np.asarray(candidate.visual_translation, dtype=np.float64).reshape(3),
@@ -806,6 +873,7 @@ def build_score_ranked_candidates_for_arm(
     hand_data: Dict[str, np.ndarray],
     frame: int,
     candidate_frame_mode: str = "anygrasp_raw",
+    orientation_metric: str = "so3",
 ) -> Tuple[List[CandidateRecord], int]:
     hand_valid = np.asarray(hand_data[f"{arm_name}_gripper_valid"], dtype=bool)
     hand_rotations = np.asarray(hand_data[f"{arm_name}_gripper_rotation_matrix"], dtype=np.float64)
@@ -817,10 +885,15 @@ def build_score_ranked_candidates_for_arm(
     ranked: List[CandidateRecord] = []
     for candidate_idx, grasp in enumerate(grasps):
         translation = np.asarray(grasp["translation"], dtype=np.float64).reshape(3)
-        rotation_matrix = np.asarray(grasp["rotation_matrix"], dtype=np.float64).reshape(3, 3)
+        raw_rotation_matrix = np.asarray(grasp["rotation_matrix"], dtype=np.float64).reshape(3, 3)
+        rotation_matrix = orthonormalize_rotation(
+            raw_rotation_matrix @ candidate_frame_matrix(candidate_frame_mode)
+        )
         anygrasp_score = float(grasp["score"])
-        raw_rotation_distance = rotation_distance_deg(ref_rot_raw, rotation_matrix)
-        rotation_distance = rotation_distance_deg(ref_rot, rotation_matrix)
+        raw_rotation_distance = rotation_distance_deg(ref_rot_raw, raw_rotation_matrix)
+        approach_axis_index = 2 if str(candidate_frame_mode) == "robot_replay" else 0
+        distances = orientation_distances_deg(ref_rot, rotation_matrix, approach_axis_index)
+        rotation_distance = float(distances[str(orientation_metric)])
         orientation_score = orientation_score_from_rotation_distance(rotation_distance)
         ranked.append(
             CandidateRecord(
@@ -830,6 +903,10 @@ def build_score_ranked_candidates_for_arm(
                 fused_score=anygrasp_score,
                 rotation_distance_deg=rotation_distance,
                 raw_rotation_distance_deg=raw_rotation_distance,
+                so3_rotation_distance_deg=float(distances["so3"]),
+                parallel_jaw_symmetry_distance_deg=float(distances["parallel_jaw_symmetry"]),
+                approach_axis_distance_deg=float(distances["approach_axis"]),
+                orientation_metric=str(orientation_metric),
                 translation=translation,
                 rotation_matrix=rotation_matrix,
                 visual_translation=translation,
@@ -1038,20 +1115,25 @@ def make_fused_line_builder(anygrasp_weight: float, orientation_weight: float):
     return fused_line
 
 
-def orientation_formula_lines(max_rotation_distance_deg: float) -> List[str]:
+def orientation_formula_lines(max_rotation_distance_deg: float, orientation_metric: str) -> List[str]:
     lines = [
-        "ori = max(0, 1 - aligned_rot/180)",
-        "raw_rot shown per row",
+        f"metric = {str(orientation_metric)}",
+        "ori = max(0, 1 - metric_deg/180)",
     ]
     if float(max_rotation_distance_deg) >= 0.0:
         lines.append(f"keep if rot <= {float(max_rotation_distance_deg):.1f} deg")
     return lines
 
 
-def fused_formula_lines(anygrasp_weight: float, orientation_weight: float, max_rotation_distance_deg: float) -> List[str]:
+def fused_formula_lines(
+    anygrasp_weight: float,
+    orientation_weight: float,
+    max_rotation_distance_deg: float,
+    orientation_metric: str,
+) -> List[str]:
     lines = [
         f"total = anygrasp*{float(anygrasp_weight):.2f} + ori*{float(orientation_weight):.2f}",
-        "ori = max(0, 1 - aligned_rot/180)",
+        f"ori = 1 - {str(orientation_metric)}/180",
     ]
     if float(max_rotation_distance_deg) >= 0.0:
         lines.append(f"keep if rot <= {float(max_rotation_distance_deg):.1f} deg")
@@ -1070,6 +1152,10 @@ def summarize_top_candidates(ranked: Sequence[CandidateRecord], top_n: int) -> L
                 "fused_score": float(item.fused_score),
                 "rotation_distance_deg": float(item.rotation_distance_deg),
                 "raw_rotation_distance_deg": float(item.raw_rotation_distance_deg),
+                "so3_rotation_distance_deg": float(item.so3_rotation_distance_deg),
+                "parallel_jaw_symmetry_distance_deg": float(item.parallel_jaw_symmetry_distance_deg),
+                "approach_axis_distance_deg": float(item.approach_axis_distance_deg),
+                "orientation_metric": str(item.orientation_metric),
                 "nearest_object": str(item.nearest_object),
                 "nearest_object_distance_m": float(item.nearest_object_distance_m),
                 "translation_cam": np.asarray(item.translation, dtype=np.float64).reshape(3).tolist(),
@@ -1099,6 +1185,7 @@ def main() -> None:
     candidate_orientation_remap_matrix = resolve_orientation_remap(args.candidate_orientation_remap_label)
     candidate_frame_remap_matrix = candidate_frame_matrix(args.candidate_frame_mode)
     preview_gripper_forward_axis = gripper_visual_forward_axis(args.candidate_frame_mode)
+    approach_axis_index = 2 if str(args.candidate_frame_mode) == "robot_replay" else 0
 
     hand_data = load_hand_data(args.hand_npz)
     available_frames = list_available_grasp_frames(args.anygrasp_dir)
@@ -1147,8 +1234,12 @@ def main() -> None:
         left_hand_reference_overlay = left_hand_reference if bool(args.draw_hand_reference) else None
         right_hand_reference_overlay = right_hand_reference if bool(args.draw_hand_reference) else None
         if args.replay_dir is None:
-            left_score_ranked, left_ref_frame = build_score_ranked_candidates_for_arm(grasps, "left", hand_data, frame, str(args.candidate_frame_mode))
-            right_score_ranked, right_ref_frame = build_score_ranked_candidates_for_arm(grasps, "right", hand_data, frame, str(args.candidate_frame_mode))
+            left_score_ranked, left_ref_frame = build_score_ranked_candidates_for_arm(
+                grasps, "left", hand_data, frame, str(args.candidate_frame_mode), str(args.orientation_metric)
+            )
+            right_score_ranked, right_ref_frame = build_score_ranked_candidates_for_arm(
+                grasps, "right", hand_data, frame, str(args.candidate_frame_mode), str(args.orientation_metric)
+            )
             score_image = build_combined_image(
                 annotate_arm_preview(
                 base_image=base_image,
@@ -1242,6 +1333,8 @@ def main() -> None:
             anygrasp_score_weight=float(args.anygrasp_score_weight),
             orientation_score_weight=float(args.orientation_score_weight),
             max_rotation_distance_deg=float(args.max_rotation_distance_deg),
+            orientation_metric=str(args.orientation_metric),
+            approach_axis_index=int(approach_axis_index),
         )
         right_object_filtered, right_ref_frame, right_target_count = build_candidates_for_arm(
             shared_candidates=shared_candidates,
@@ -1250,6 +1343,8 @@ def main() -> None:
             anygrasp_score_weight=float(args.anygrasp_score_weight),
             orientation_score_weight=float(args.orientation_score_weight),
             max_rotation_distance_deg=float(args.max_rotation_distance_deg),
+            orientation_metric=str(args.orientation_metric),
+            approach_axis_index=int(approach_axis_index),
         )
         object_count_text = " ".join(
             f"{name}={int(count)}"
@@ -1272,6 +1367,7 @@ def main() -> None:
             f"[frame {frame:06d}][orientation-filter] "
             f"left_before={left_target_count} left_after={len(left_object_filtered)} "
             f"right_before={right_target_count} right_after={len(right_object_filtered)} "
+            f"metric={str(args.orientation_metric)} "
             f"max_rot_deg={float(args.max_rotation_distance_deg):.1f}"
         )
         warning_messages: List[str] = []
@@ -1301,6 +1397,8 @@ def main() -> None:
                 "candidate_target_local_z_offset_m": float(args.candidate_target_local_z_offset_m),
                 "candidate_post_rot_xyz_deg": np.asarray(args.candidate_post_rot_xyz_deg, dtype=np.float64).reshape(3).tolist(),
                 "candidate_orientation_remap_label": str(args.candidate_orientation_remap_label),
+                "orientation_metric": str(args.orientation_metric),
+                "approach_axis_index": int(approach_axis_index),
                 "object_world_positions": {
                     name: np.asarray(point, dtype=np.float64).reshape(3).tolist()
                     for name, point in sorted(object_world_positions.items())
@@ -1311,6 +1409,7 @@ def main() -> None:
                     "right": str(args.right_target_object),
                 },
                 "orientation_filter": {
+                    "orientation_metric": str(args.orientation_metric),
                     "max_rotation_distance_deg": float(args.max_rotation_distance_deg),
                     "left_before": int(left_target_count),
                     "left_after": int(len(left_object_filtered)),
@@ -1401,7 +1500,7 @@ def main() -> None:
                 panel_width=int(args.panel_width),
                 line_height=int(args.line_height),
                 stage_title="orientation rank",
-                formula_lines=orientation_formula_lines(float(args.max_rotation_distance_deg)),
+                formula_lines=orientation_formula_lines(float(args.max_rotation_distance_deg), str(args.orientation_metric)),
                 warning_text=None if len(left_object_filtered) > 0 else f"NO LEFT CANDIDATE ({args.left_target_object})",
                 line_builder=orientation_line,
                 gripper_forward_axis=preview_gripper_forward_axis,
@@ -1422,7 +1521,7 @@ def main() -> None:
                 panel_width=int(args.panel_width),
                 line_height=int(args.line_height),
                 stage_title="orientation rank",
-                formula_lines=orientation_formula_lines(float(args.max_rotation_distance_deg)),
+                formula_lines=orientation_formula_lines(float(args.max_rotation_distance_deg), str(args.orientation_metric)),
                 warning_text=None if len(right_object_filtered) > 0 else f"NO RIGHT CANDIDATE ({args.right_target_object})",
                 line_builder=orientation_line,
                 gripper_forward_axis=preview_gripper_forward_axis,
@@ -1449,7 +1548,7 @@ def main() -> None:
                 panel_width=int(args.panel_width),
                 line_height=int(args.line_height),
                 stage_title="fused rank",
-                formula_lines=fused_formula_lines(float(args.anygrasp_score_weight), float(args.orientation_score_weight), float(args.max_rotation_distance_deg)),
+                formula_lines=fused_formula_lines(float(args.anygrasp_score_weight), float(args.orientation_score_weight), float(args.max_rotation_distance_deg), str(args.orientation_metric)),
                 warning_text=None if len(left_object_filtered) > 0 else f"NO LEFT CANDIDATE ({args.left_target_object})",
                 line_builder=fused_line,
                 gripper_forward_axis=preview_gripper_forward_axis,
@@ -1470,7 +1569,7 @@ def main() -> None:
                 panel_width=int(args.panel_width),
                 line_height=int(args.line_height),
                 stage_title="fused rank",
-                formula_lines=fused_formula_lines(float(args.anygrasp_score_weight), float(args.orientation_score_weight), float(args.max_rotation_distance_deg)),
+                formula_lines=fused_formula_lines(float(args.anygrasp_score_weight), float(args.orientation_score_weight), float(args.max_rotation_distance_deg), str(args.orientation_metric)),
                 warning_text=None if len(right_object_filtered) > 0 else f"NO RIGHT CANDIDATE ({args.right_target_object})",
                 line_builder=fused_line,
                 gripper_forward_axis=preview_gripper_forward_axis,
@@ -1552,6 +1651,7 @@ def main() -> None:
                 "object_filter_counts": {
                     "before_total": int(len(grasps)),
                     "object_partition_counts": {name: int(count) for name, count in sorted(object_partition_counts.items())},
+                    "orientation_metric": str(args.orientation_metric),
                     "max_rotation_distance_deg": float(args.max_rotation_distance_deg),
                     "left_before_orientation_filter": int(left_target_count),
                     "left_after": int(len(left_object_filtered)),
@@ -1570,6 +1670,8 @@ def main() -> None:
                     "anygrasp": float(args.anygrasp_score_weight),
                     "orientation": float(args.orientation_score_weight),
                 },
+                "orientation_metric": str(args.orientation_metric),
+                "approach_axis_index": int(approach_axis_index),
                 "top_candidates": {
                     "left_orientation": summarize_top_candidates(left_orientation_ranked, int(args.top_k)),
                     "right_orientation": summarize_top_candidates(right_orientation_ranked, int(args.top_k)),
@@ -1591,6 +1693,8 @@ def main() -> None:
                 "candidate_target_local_x_offset_m": float(args.candidate_target_local_x_offset_m),
                 "candidate_target_local_z_offset_m": float(args.candidate_target_local_z_offset_m),
                 "candidate_orientation_remap_label": str(args.candidate_orientation_remap_label),
+                "orientation_metric": str(args.orientation_metric),
+                "approach_axis_index": int(approach_axis_index),
                 "frames": summary,
             },
             f,

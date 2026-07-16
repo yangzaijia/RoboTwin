@@ -3330,3 +3330,13 @@ Validation: isolated smoke and formal outputs are pixel-identical. Schema, backg
 - Synchronized bilingual command, summary, environment, troubleshooting, decision, README, version, paper-module, and executed-command documentation.
 
 Validation: local `py_compile`, config JSON, all-12-episode dry-runs, and isolated smoke passed. Formal output contains 12 episodes, 38 keyframes, 152 640×576 individual images, 38 1280×1152 contact sheets, twelve 1920×1540/30-fps H.264-yuv420p primary videos, and ten derived AnyGrasp MP4s. All 12 primary and 10 derived videos fully decode; all 190 PNGs pass size/nonempty checks; 12 complete package file sets and every `available` source path pass audit. The first formal command used an interpreter path missing `miniconda3/envs` and exited 127 before startup without rewriting formal output; the corrected Conda path completed.
+
+## 2026-07-16 (Parallel-jaw orientation metrics and six-panel candidate comparison V3)
+
+- `render_anygrasp_ranked_preview.py` adds `--orientation_metric=so3|parallel_jaw_symmetry|approach_axis`; legacy `so3` remains the default.
+- Summaries now record full SO(3), 180-degree parallel-jaw symmetry, and directed approach-axis errors together. `rotation_distance_deg` explicitly contains the metric actually used for filtering and ranking.
+- A new paper-asset exporter builds a 2x3 sheet: 20 canonical dense candidates, Orientation, Fused, Top-score, OursV2, and a four-strategy canonical-selection overlay. Planner offset, pregrasp, retreat, and TCP compensation are excluded.
+- With `approach_axis`, `pick_diverse_bottles/id0/frame38` selects left `#16` and right `#5` for Orientation/Fused, while Top-score remains left `#0` and right `#3`. Old right `#3` has SO(3)/symmetry/approach errors of `164.045/60.866/58.306 deg`.
+- The former four-panel image is backed up as `all_strategies_contact_sheet_v2_4panel.png`; the requested `all_strategies_contact_sheet.png` is now the 1920x1152 six-panel version.
+
+Validation: `py_compile` in `RoboTwin_bw`, exporter dry-run, 20-candidate object-partition audit, summary-field and candidate-ID checks, OpenCV reads plus dimensions/hashes for all seven V3 PNGs, and visual QA of the 1920x1152 sheet all passed. No IK, planning, or robot execution was run.

@@ -3328,3 +3328,13 @@ Validation: 隔离 smoke 与正式输出逐像素一致；8 张单图/2 张 cont
 - 同步更新双语命令、摘要、环境、故障、决策、README、版本摘要及 paper module/executed-command 文档。
 
 Validation: 两个脚本本地 `py_compile`、配置 JSON、12-episode dry-run 和隔离 smoke 均通过。正式结果为 12 个 episode、38 个关键帧、152 张 640×576 单图、38 张 1280×1152 contact sheet、12 个 1920×1540/30 fps H.264-yuv420p 主视频和 10 个派生 AnyGrasp MP4。12 个主视频与 10 个派生视频全部完整解码；190 张 PNG 尺寸/非空、12 组 package 文件及所有 `available` 源路径审计通过。首次正式命令因解释器路径少了 `miniconda3/envs` 而在启动前退出 127，未改写正式目录；使用正确 Conda 路径后完成。
+
+## 2026-07-16（平行夹爪朝向评分与六格候选对比 V3）
+
+- `render_anygrasp_ranked_preview.py` 新增 `--orientation_metric=so3|parallel_jaw_symmetry|approach_axis`；旧 `so3` 默认保持不变。
+- summary 同时记录完整 SO(3)、180° 平行夹爪对称和有向 approach-axis 三种误差；当前 `rotation_distance_deg` 明确表示实际用于过滤/排序的指标。
+- 新论文素材导出器生成 2×3 六格：20 个 canonical dense candidates、Orientation、Fused、Top-score、OursV2 和四策略 canonical selection overlay；不混入 planner offset/pregrasp/retreat/TCP compensation。
+- `pick_diverse_bottles/id0/frame38` 使用 `approach_axis` 后，Orientation/Fused 为左 `#16`、右 `#5`；Top-score 为左 `#0`、右 `#3`。旧右 `#3` 的 SO(3)/symmetry/approach 为 `164.045°/60.866°/58.306°`。
+- 旧四格图备份为 `all_strategies_contact_sheet_v2_4panel.png`；用户指定的 `all_strategies_contact_sheet.png` 发布为 1920×1152 六格版本。
+
+Validation: `RoboTwin_bw` 下 `py_compile`、V3 exporter dry-run、20-candidate object partition、summary 字段/候选 ID 审计、全部 7 张 V3 PNG OpenCV 读取、尺寸/hash 检查和 1920×1152 成品视觉 QA 均通过。未运行 IK、规划或机器人执行。
