@@ -3302,13 +3302,19 @@ Validation: 本地和 pine2 `py_compile`、`bash -n`、全 8 格 dry-run 通过�
 
 Validation: 10 个 Canonical 单元测试、本地/pine2 `py_compile`、`bash -n` 和 8 格 dry-run 通过，且 dry-run 不创建输出。V2 Legacy Orientation/Top 与历史原输出的身份、raw pose、target 最大差均为 0。`handover_bottle/id1` 四策略语义源位置差均为 0，旋转误差最大 `4.2e-16`；Canonical Human 内部 `[handover] SUCCESS`。最终 1920×648、H.264 High、yuv420p、5 fps、265 帧/53 s MP4 通过 ffprobe、完整解码和中间帧视觉 QA。首次 V2 审计分别暴露 Human 字段读取路径与 `numpy.bool_` JSON 序列化错误，均已修复；错误 Canonical Human 样本移动保留在 `_superseded/`。
 
-## 2026-07-16（IK semantic grid 双相机 profile 与 6×1×2 批次）
+## 2026-07-16（论文网格标题分离与关键帧候选图）
 
-- 定位到旧视频的相机混用：Orientation/Fused/Top 为 `640×360/fovy 90°/10 fps`，Human Replay 为 `640×480/fovy 42.499880046655484°/5 fps`。head pose 相同，但投影不可直接比较。
-- `run_ik_logic_strategy.sh`、`run_ik_logic_human_replay.sh` 与 `run_ik_logic_grid.sh` 新增 `--camera-profile d435|wide`；contract、输入审计和 compositor 同时校验 profile、宽、高、fps，拒绝 8 格混用。
-- 源输出按 `_sources/<profile>/...` 隔离，审计/manifest 写入 `_grid_meta/<profile>/...`，最终 MP4 扁平保存为 `vis/<task>_id<id>_vd435.mp4` 或 `vwide.mp4`。
-- 新增 `run_ik_semantic_camera_batch.sh`，固定 `pick_diverse_bottles/id0`、`place_bread_basket/id0`、`stack_cups/id0`、`handover_bottle/id1`、`pnp_bread/id7`、`pnp_tray/id0`，顺序运行 12 grids / 96 cells，并写状态表与完成 marker。
-- 分析 `handover_bottle/id1` Canonical 静止：Orientation/Fused 为右臂计划成功、左臂失败，随后 `dual_stage_require_all_plans=1` 跳过 stage；Legacy 的宽松姿态阈值、EE reach、不同 target/TCP 语义和可执行单臂计划不能作为同一物理 RTCP 的成功证据。
-- 不修改 OursV2。D435 smoke 完成后，完整双 profile 批次提交到 pine2 tmux `pcanonical_camprofiles_6x1x2`；日志为 `_batch/camera_profiles_batch.log`，状态为 `_batch/camera_profiles_status.tsv`。
+- `compose_pipeline_grid.py` 新增兼容旧配置的 `label_layout=separate`：保留 480x270 视频内容，在上方增加 38 px 标题栏；Dense-v2 4x5 网格更新为 1920x1540，旧标题叠加视频和 manifest 独立保留。
+- 新增 JSON 驱动的 `export_keyframe_candidate_images.py`，从 Selection Strategy Audit V4 metadata 导出 `pick_diverse_bottles/id0` 第 38/78 帧的 Orientation/Fused/Top-score/OursV2 左右手分栏图。
+- 产物为 8 张 1280x608 单图和 2 张 2560x1216 contact sheet；双手帧标为 `BOTH`。只显示 Selection Pose；OursV2 明确标为 `HUMAN TARGET`。
+- 新增双语命令文档，并同步当前摘要、环境、故障、决策、README、版本和论文素材文档。
 
-Validation: 本地和 pine2 `bash -n`、Python `py_compile`、12-grid/96-cell dry-run 通过，且 dry-run 不创建输出。`handover_bottle/id1` D435 8 个源均为 `640×480 @ 5 fps`，语义/相机 audit `all_ok=true`；最终 `1920×648`、H.264 High、yuv420p、5 fps、265 帧/53 s MP4 通过 ffprobe、完整解码与中间帧视觉 QA，SHA-256 为 `757b6bf4791c43253de4eaae080946910e4333a04f10808f17495e32c8c36263`。
+Validation: compositor dry-run、JSON 解析、manifest layout 断言、ffprobe、642 帧完整解码和 t=10 s 视觉检查通过。视频为 H.264/yuv420p、1920x1540、30 fps、21.4 s。8 张单图/2 张 contact sheet 均可由 RoboTwin_bw OpenCV 读取且尺寸正确；FFmpeg 解码通过。默认 Python 缺少 `cv2` 的首次只读验证失败，改用文档指定环境后通过；应用对超宽 PNG 的黑块预览经严格黑色像素审计确认不是文件损坏。最终远端审计发现命令页曾把实际 `individual_images/output` schema 写成 `items/output_path`，已修正并按真实 schema 重跑。
+
+## 2026-07-16（关键帧候选图改为单 replay 双 gripper）
+
+- 按用户要求取消每张图的左右分栏；每个关键帧/策略只读取一张 requested-keyframe Foundation replay 背景，并在同图投影左右两个 Selection Pose。
+- 标题仍在画面外：第一行标 `BOTH`，第二行分别列 LEFT/RIGHT candidate 或 Human Target。图内左右夹爪使用不同轮廓色，XYZ 轴仍为红/绿/蓝。
+- manifest 升级为 schema v2 和 `single_replay_background_combined_arms`；正式输出为 8 张 640x576 单图、2 张 1280x1152 contact sheet。旧双面板结果保存在 `outputs/keyframe_candidates_split_panels_v1/`。
+
+Validation: 隔离 smoke 与正式输出逐像素一致；8 张单图/2 张 contact sheet 的 schema、背景帧、左右候选编号、尺寸、OpenCV 读取和 FFmpeg 解码均通过。第 38 帧 Orientation/OursV2 单图完成视觉 QA，标题无裁切且左右 gripper 同图可见。超宽 contact sheet 的应用黑块预览再次经严格黑像素比例 0 确认为预览伪影。

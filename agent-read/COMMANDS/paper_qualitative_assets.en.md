@@ -41,7 +41,9 @@ cd /home/zaijia001/ssd/data/piper/paper_qualitative_assets
   --config keyframe_candidate_config.json --overwrite
 ```
 
-Each strategy PNG has separate left/right panels, each drawing only that arm's Selection Pose. A dual-arm event is marked `BOTH` in the global header. Axes follow `X=red, Y=green, Z=blue`. Orientation/Fused/Top-score display the selected AnyGrasp candidate. OursV2 displays a synthetic human-retarget target and is explicitly labeled `HUMAN TARGET`; it must not be described as an AnyGrasp candidate.
+Each strategy PNG uses exactly one requested-keyframe replay background and draws both left and right gripper Selection Poses on that same image; it is no longer split into panels. A dual-arm event is marked `BOTH`, and the second header line lists the LEFT/RIGHT candidate identities. Axes follow `X=red, Y=green, Z=blue`. Orientation/Fused/Top-score display the selected AnyGrasp candidate. OursV2 displays a synthetic human-retarget target and is explicitly labeled `HUMAN TARGET`; it must not be described as an AnyGrasp candidate. The former split-panel version is preserved under `outputs/keyframe_candidates_split_panels_v1/`.
+
+For an isolated layout check, add `--output-root <SMOKE_DIR>`; omitting it retains the formal config output root.
 
 ## Validation
 
@@ -57,10 +59,17 @@ ffmpeg -hide_banner -v error \
 import cv2, json
 from pathlib import Path
 d = json.loads(Path('outputs/keyframe_candidates/manifest.json').read_text())
+assert d['schema_version'] == 2
+assert d['layout'] == 'single_replay_background_combined_arms'
 assert len(d['individual_images']) == 8
 assert len(d['contact_sheets']) == 2
 for item in d['individual_images']:
-    assert cv2.imread(item['output']) is not None
+    image = cv2.imread(item['output'])
+    assert list(image.shape) == item['image_shape'] == [576, 640, 3]
+    assert item['layout'] == d['layout']
+    assert item['background_frame'] == item['keyframe']
+for item in d['contact_sheets']:
+    assert list(cv2.imread(item['output']).shape) == item['image_shape'] == [1152, 1280, 3]
 print('candidate images:', len(d['individual_images']))
 PY
 ```

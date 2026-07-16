@@ -45,5 +45,5 @@
 
 - 不缩小或遮盖原有 480x270 视频内容；在每格上方增加独立 38 px 标题栏，使 4x5 网格变为 1920x1540。旧标题叠加版保留为独立备份。
 - 论文候选图只画 V4 metadata 中的 Selection Pose，排除 planner offset、retreat、pregrasp 和 TCP compensation，避免把选择策略与后续规划混在一起。
-- 左右手分栏独立画轴；双手关键帧在总标题标为 `BOTH`。局部轴固定使用 X 红、Y 绿、Z 蓝。
+- 同一关键帧/策略只使用一张 requested-keyframe replay 背景，左右 gripper 同图叠加；双手关键帧在总标题标为 `BOTH`，标题第二行分别列 LEFT/RIGHT 候选。局部轴固定使用 X 红、Y 绿、Z 蓝。
 - OursV2 的点来自 synthetic human-retarget target，必须标为 `HUMAN TARGET`；Orientation/Fused/Top-score 才标 AnyGrasp candidate。
