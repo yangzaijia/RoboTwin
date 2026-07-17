@@ -1036,3 +1036,52 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
 Fused 使用同一 approach-axis summary，把 group 改为 `fused`。canonical Top-score 使用 score-only preview root `anygrasp_h2o_preview_d435_robot_frame_topscore_canonical_v3_full`，并复用其中的 `fused` 组，因为该 summary 的 fused 权重是 `1.0 score + 0.0 orientation`。
 
 本次 `pick_diverse_bottles/id0`：Orientation/Fused 在 frame 38 为 `L16/R5`、frame 78 为 `L14/R16`，两者执行成功；Top-score 为 `L0/R3`、`L0/R1`，最后左臂 action miss `0.0536 m`。这些是 planner 可视化结果，不等价于物理有效抓取验证。
+
+## L15.19.5：Canonical candidate camera-up V4
+
+适用轴约定：local `+Z`（蓝）是 approach，local `+Y`（绿）是开合，local `+X`（红）是两者平面法线。以下参数让 planner 在不改变 local `+Z` 的两个平行夹爪等价姿态中选择红轴朝上的分支：
+
+参数模板（不可直接运行）：
+
+```bash
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --tasks <TASK> --ids <ID> \
+  --preview_root <CANONICAL_PREVIEW_ROOT> \
+  --reuse_preview_candidate_group <orientation|fused> \
+  --output_root <ISOLATED_V4_OUTPUT_ROOT> \
+  --candidate_keep_camera_up 1 \
+  --candidate_camera_forward_axis local_z \
+  --candidate_camera_top_axis x \
+  --candidate_target_local_x_offset_m 0.0 \
+  --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12
+```
+
+可运行的 `pick_diverse_bottles/id0` Orientation 命令：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --gpu 2 --max_per_task 1 --tasks pick_diverse_bottles --ids 0 \
+  --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v4_orientation_approach_camera_up_20260717 \
+  --preview_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3_full \
+  --reuse_preview_candidate_group orientation \
+  --trajectory_mode cartesian_interp_ik --cartesian_auto_step_m 0.03 \
+  --replan_attempts 1 --allow_partial_dual_stage --execute_partial_cartesian_plan \
+  --ik_max_position_threshold_m 0.02 --ik_max_rotation_threshold_rad 3.14 \
+  --candidate_selection_mode planner --candidate_keep_camera_up 1 \
+  --candidate_camera_forward_axis local_z --candidate_camera_top_axis x \
+  --candidate_target_local_x_offset_m 0.0 --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12 \
+  --debug_gripper_actor_forward_axis local_z --visualize_targets
+```
+
+2×2 成品与配置：
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4_config.json
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/CAMERA_UP_V4_NOTES.md
+```
+
+本 episode 的 Orientation/Fused 候选完全相同，成品 Fused 格复用 Orientation V4 完整画面，避免同一目标因单-seed IK 随机分支产生伪差异。Top-score V4 在右臂 grasp miss `0.0357 m` 后安全停止，余下时间冻结末帧。该视频是姿态/重定向诊断，不是执行成功率比较。

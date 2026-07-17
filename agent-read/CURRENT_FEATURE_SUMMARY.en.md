@@ -7,6 +7,10 @@
 
 ## Added in this change
 
+- Canonical `robot_replay` candidates now have an explicit camera-up equivalent-pose constraint: blue local `+Z` remains the approach axis, green local `+Y` is the jaw-opening axis, and red local `+X = +Y x +Z` is the opening--approach-plane normal. The rule chooses between `R` and `R @ diag(-1,-1,+1)` so red points toward world `+Z`.
+- `--candidate_camera_forward_axis local_z --candidate_camera_top_axis x` acts only when explicitly requested. Legacy defaults remain `local_x/top=z`; historical wrapper behavior and OursV2 are unchanged.
+- The `pick_diverse_bottles/id0` V4 2x2 is under `paper_qualitative_assets/.../id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4`. Orientation/Fused flip both left keyframes and neither right keyframe; Top-score flips only left frame 38. Every applied flip changes local `+Z` by 0 degrees.
+- V4 fixes only the redundant wrist-roll branch; it does not make single-seed Cartesian IK deterministic. Orientation completes the sequence with recorded left-arm misses. Top-score safely stops after a `35.7 mm` right grasp miss and freezes its final frame. A three-replan retry was worse and is excluded from the deliverable.
 - The `pick_diverse_bottles/id0` approach-axis Orientation, Fused, and canonical Top-score selections now have isolated planner replays. The wrapper accepts `--reuse_preview_candidate_group=orientation|fused` while retaining `orientation` as its default.
 - New paper assets include a 2x2 strategy-execution video and a 4x5 full-pipeline video with separate headers. Orientation/Fused succeed; Top-score has a `53.6 mm` left-arm action miss that is explicitly labeled. Historical Stage-2 repaints are not paired with the new candidates.
 - Planner targets, current readback, reach checks, and visualization all use `T_W_RTCP`.

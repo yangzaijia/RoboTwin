@@ -85,3 +85,7 @@ OursV2 remains unchanged. The old same-numeric-target V1 is invalid because it o
 ### 2026-07-16: paper qualitative assets v1.x increment
 
 No method or IK version changes. The Dense-v2 paper grid moves titles out of video content into separate 38 px headers and preserves the former version. The JSON-driven tools now cover 6 tasks × 2 episodes: 38 interaction keyframes produce 152 four-strategy images and 38 contact sheets, and each episode directory receives its own 4×5 video/config/manifest/README. Single/dual-arm scope comes from metadata. Missing candidates or source videos are explicit `MISSING` entries, never fabricated or replaced across camera versions. The old split-panel version remains separate.
+
+### 2026-07-17: Canonical candidate camera-up v1.x increment
+
+This does not promote a major version or modify OursV2/V3 outputs. The AnyGrasp planner gains explicit camera-forward/top axes. Canonical local-Z-forward mode chooses the local-X-up branch between parallel-jaw-equivalent poses with `R @ diag(-1,-1,+1)`, while legacy local-X-forward defaults remain unchanged. An isolated `pick_diverse_bottles/id0` V4 2x2 diagnostic records execution failures and final-frame freezing explicitly in config/manifest.

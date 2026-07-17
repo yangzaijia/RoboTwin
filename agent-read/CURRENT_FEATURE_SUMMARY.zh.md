@@ -7,6 +7,10 @@
 
 ## 本轮新增
 
+- Canonical `robot_replay` 候选新增显式 camera-up 等价姿态约束：蓝色 local `+Z` 保持为前进轴，绿色 local `+Y` 为开合轴，红色 local `+X = +Y x +Z` 为开合--前进平面法线；在 `R` 与 `R @ diag(-1,-1,+1)` 中选择红轴朝 world `+Z` 的分支。
+- `--candidate_camera_forward_axis local_z --candidate_camera_top_axis x` 仅在显式启用时作用；旧默认仍是 `local_x/top=z`，历史 wrapper 行为和 OursV2 均不改变。
+- `pick_diverse_bottles/id0` 的 V4 2x2 视频位于 `paper_qualitative_assets/.../id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4`。Orientation/Fused 左手两关键帧翻转、右手不翻；Top-score 只翻左手 frame 38；每次翻转的 local `+Z` 变化均为 0°。
+- V4 只修正冗余 wrist-roll 分支，不保证单-seed Cartesian IK 稳定。Orientation 完成整段但保留左臂 miss；Top-score 因右臂 grasp miss `35.7 mm` 安全停止并冻结末帧；三次重规划重试更差，未进入成品。
 - `pick_diverse_bottles/id0` 的 approach-axis Orientation、Fused 与 canonical Top-score 候选已复用到隔离 planner 输出；wrapper 新增 `--reuse_preview_candidate_group=orientation|fused`，默认仍为 `orientation`。
 - 新论文素材包含 2×2 策略执行视频和 4×5 完整链路视频，标题栏独立于画面。Orientation/Fused 执行成功；Top-score 左臂 action miss `53.6 mm`，在标题与 manifest 中如实标记。历史 Stage-2 repaint 未与新候选错配。
 - planner target、current readback、reach check 和可视化统一为 `T_W_RTCP`。

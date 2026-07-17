@@ -110,3 +110,10 @@
 
 - The correct path is `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`, not `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`.
 - This path check fails before the exporter starts and therefore does not rewrite the formal output. Correct the interpreter and rerun with `--overwrite`.
+
+## Canonical candidate wrist/camera appears below the gripper
+
+- Symptom: blue local `+Z` has the intended approach direction, but the wrist is rolled 180 degrees about blue and red local `+X` (the opening--approach-plane normal) points downward in world.
+- Cause: legacy `--candidate_keep_camera_up` assumed local-X-forward and used `diag(+1,-1,-1)`. Canonical `robot_replay` uses local `+Z` as forward, so the legacy flip cannot be reused safely.
+- Check `candidate_camera_forward_axis`, `candidate_camera_top_axis`, `top_axis_up_dot`, `camera_up_flip_applied`, and `forward_axis_change_deg` in `plan_summary.json`. Canonical output should report `local_z`, `x`, nonnegative up dot, and about zero-degree forward change when flipped.
+- Fix: explicitly pass `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`. This only selects between two equivalent parallel-jaw roll branches; it does not guarantee IK success. Do not hide IK branch divergence by blindly increasing replan attempts.

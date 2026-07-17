@@ -3347,3 +3347,13 @@ Validation: `RoboTwin_bw` 下 `py_compile`、V3 exporter dry-run、20-candidate 
 - Orientation/Fused 的 frame 38/78 候选均为 `L16/R5`、`L14/R16` 且执行成功；Top-score 为 `L0/R3`、`L0/R1`，最终左臂 action miss `0.0536 m`，如实标记。
 
 Validation: 本地/远端 `bash -n`、合法/非法 group dry-run、三个 planner 实跑、两个 compositor dry-run、manifest 可用路径审计、ffprobe、两个 H.264/yuv420p/30 fps/21.4 s 成品完整解码，以及 t=8/16 s 视觉 QA 通过。4×5 第一次 QA 发现三个长标题重叠，缩短标题后重新编码并复核通过；一次临时抽帧 heredoc 解析错误和一次缺少 `jq` 仅影响 QA 命令，改用独立 FFmpeg/Python 后完成。
+
+## 2026-07-17（Canonical candidate camera-up V4）
+
+- 修复旧 camera-up 逻辑与 canonical `robot_replay` 轴约定不一致：旧逻辑固定绕 local X 翻转，V4 支持显式 local X/local Z 前进轴；canonical 使用 `R @ diag(-1,-1,+1)` 绕 local Z 翻转。
+- local X/Y/Z 均可作为 top axis；plan summary 新增 `candidate_camera_forward_axis`。wrapper 新增两个透传参数并保留旧默认 `local_x/top=z`。
+- 新增四项回归测试：旧 local-X 行为不变、canonical local-Z 翻转使平面法线朝上且前进轴 0° 变化、已朝上的 canonical pose 不变、首关键帧从 raw pose 重建后保留正确 flip provenance。
+- `pick_diverse_bottles/id0` 新增隔离 V4 Orientation、Fused、Top-score 输出和 2×2 论文视频；V3/OursV2 不覆盖。Orientation/Fused 左两帧翻转、右两帧不翻；Top-score 仅左 frame 38 翻转。
+- Fused 与 Orientation 该集候选完全相同；独立 Fused IK 因单-seed 分支发散，最终格复用完整 Orientation V4 并在 config/manifest 记录。Top-score 右 grasp miss `35.7 mm` 后安全停止并冻结末帧。
+
+Validation: `py_compile`、`bash -n`、wrapper dry-run、直接运行四项回归测试通过；环境缺 `pytest`，因此测试文件同时支持直接执行。V4 compositor dry-run、源视频 ffprobe、成品 H.264 High/yuv420p/1280×796/30 fps/642 帧/21.4 s、完整解码和 t=4/8/17 s 视觉 QA 通过。一次 retry3 使后续 grasp 更差，明确排除。抽帧期间一次错误 V3 路径、一次 `fmpeg` 拼写和一次错误本地远端 workdir 仅影响临时 QA，均未改写正式输出。

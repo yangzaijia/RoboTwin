@@ -264,8 +264,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--debug_visualize_selected_keyframe_axes", type=int, default=1, help="If 1, show selected-keyframe axis actors in addition to the active target axes. Set 0 for target-axes-only viewer debugging.")
     parser.add_argument("--candidate_orientation_remap_label", type=str, default="identity")
     parser.add_argument("--candidate_post_rot_xyz_deg", type=float, nargs=3, default=[0.0, 0.0, 0.0])
-    parser.add_argument("--candidate_keep_camera_up", type=int, default=0, help="If 1, keep the gripper/camera top side facing upward overall while preserving the original grasp direction. The planner only resolves the redundant roll about the gripper forward axis.")
-    parser.add_argument("--candidate_camera_top_axis", choices=["y", "z"], default="z", help="Which local gripper axis should be treated as the camera/top direction when --candidate_keep_camera_up=1.")
+    parser.add_argument("--candidate_keep_camera_up", type=int, default=0, help="If 1, keep the gripper/camera top side facing upward overall while preserving the original grasp direction. The planner only resolves the redundant 180-degree roll about --candidate_camera_forward_axis.")
+    parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. local_x retains the legacy AnyGrasp/R1 behavior; local_z is for canonical robot-replay candidates.")
+    parser.add_argument("--candidate_camera_top_axis", choices=["x", "y", "z"], default="z", help="Local gripper axis treated as the camera/top direction when --candidate_keep_camera_up=1. For canonical local-Z-forward parallel jaws, use x because local Y is the opening axis and Y cross Z equals X.")
     parser.add_argument("--candidate_target_local_x_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +X before planning/visualization. In the default identity AnyGrasp frame this is the AnyGrasp finger-depth axis, which is not the same convention as direct hand replay's local +Z approach axis.")
     parser.add_argument("--candidate_target_local_z_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +Z before planning/visualization. Use this with --candidate_orientation_remap_label swap_red_blue to reproduce the direct replay convention where blue local +Z is the approach/forward axis.")
     parser.add_argument("--manual_candidate", type=str, nargs=3, action="append", default=[], metavar=("FRAME", "ARM", "CANDIDATE_IDX"), help="Optional manual candidate override, e.g. --manual_candidate 1 left 5. Partial overrides only reorder debug display; full two-frame overrides for one arm drive selection directly.")
@@ -1281,6 +1282,7 @@ def candidate_to_world_pose(
         pose_world_matrix[:3, :3], roll_debug = constrain_roll_keep_top_axis_up(
             pose_world_matrix[:3, :3],
             top_axis=args.candidate_camera_top_axis,
+            forward_axis=args.candidate_camera_forward_axis,
         )
         quat = base.quat_xyzw_to_wxyz(R.from_matrix(base.orthonormalize_rotation(pose_world_matrix[:3, :3])).as_quat())
         pose_world_wxyz = np.concatenate([pose_world_matrix[:3, 3], quat]).astype(np.float64)
@@ -1288,21 +1290,46 @@ def candidate_to_world_pose(
 
 
 def top_axis_up_dot(rotation_world: np.ndarray, top_axis: str) -> float:
-    axis_idx = 1 if top_axis == "y" else 2
+    axis_idx = {"x": 0, "y": 1, "z": 2}[str(top_axis)]
     axis_vec = np.asarray(rotation_world, dtype=np.float64).reshape(3, 3)[:, axis_idx]
     return float(np.dot(axis_vec, np.array([0.0, 0.0, 1.0], dtype=np.float64)))
 
 
-def forward_axis_change_deg(rotation_a: np.ndarray, rotation_b: np.ndarray) -> float:
-    x_a = np.asarray(rotation_a, dtype=np.float64).reshape(3, 3)[:, 0]
-    x_b = np.asarray(rotation_b, dtype=np.float64).reshape(3, 3)[:, 0]
-    dot = float(np.clip(np.dot(x_a, x_b) / max(np.linalg.norm(x_a) * np.linalg.norm(x_b), 1e-12), -1.0, 1.0))
+def camera_forward_axis_index(forward_axis: str) -> int:
+    if str(forward_axis) == "local_x":
+        return 0
+    if str(forward_axis) == "local_z":
+        return 2
+    raise ValueError(f"Unsupported candidate camera forward axis: {forward_axis}")
+
+
+def camera_roll_flip_180_matrix(forward_axis: str) -> np.ndarray:
+    if str(forward_axis) == "local_x":
+        return np.diag([1.0, -1.0, -1.0]).astype(np.float64)
+    if str(forward_axis) == "local_z":
+        return np.diag([-1.0, -1.0, 1.0]).astype(np.float64)
+    raise ValueError(f"Unsupported candidate camera forward axis: {forward_axis}")
+
+
+def forward_axis_change_deg(
+    rotation_a: np.ndarray,
+    rotation_b: np.ndarray,
+    forward_axis: str = "local_x",
+) -> float:
+    axis_idx = camera_forward_axis_index(forward_axis)
+    axis_a = np.asarray(rotation_a, dtype=np.float64).reshape(3, 3)[:, axis_idx]
+    axis_b = np.asarray(rotation_b, dtype=np.float64).reshape(3, 3)[:, axis_idx]
+    dot = float(np.clip(np.dot(axis_a, axis_b) / max(np.linalg.norm(axis_a) * np.linalg.norm(axis_b), 1e-12), -1.0, 1.0))
     return float(np.rad2deg(np.arccos(dot)))
 
 
-def constrain_roll_keep_top_axis_up(rotation_world: np.ndarray, top_axis: str) -> Tuple[np.ndarray, Dict[str, float]]:
+def constrain_roll_keep_top_axis_up(
+    rotation_world: np.ndarray,
+    top_axis: str,
+    forward_axis: str = "local_x",
+) -> Tuple[np.ndarray, Dict[str, float]]:
     rot = base.orthonormalize_rotation(rotation_world)
-    roll_flip_180 = np.diag([1.0, -1.0, -1.0]).astype(np.float64)
+    roll_flip_180 = camera_roll_flip_180_matrix(forward_axis)
     rot_flipped = base.orthonormalize_rotation(rot @ roll_flip_180)
     base_dot = top_axis_up_dot(rot, top_axis)
     flipped_dot = top_axis_up_dot(rot_flipped, top_axis)
@@ -1315,7 +1342,7 @@ def constrain_roll_keep_top_axis_up(rotation_world: np.ndarray, top_axis: str) -
     return chosen, {
         "original_top_axis_up_dot": float(base_dot),
         "camera_up_flip_applied": int(flip_applied),
-        "forward_axis_change_deg": float(forward_axis_change_deg(rot, chosen)),
+        "forward_axis_change_deg": float(forward_axis_change_deg(rot, chosen, forward_axis)),
     }
 
 
@@ -1334,7 +1361,7 @@ def build_candidate_pose_variant(
     pose_world_matrix = pose_wxyz_to_matrix(pose_world_wxyz)
     rot = base.orthonormalize_rotation(pose_world_matrix[:3, :3])
     if bool(flip_roll_180):
-        rot = base.orthonormalize_rotation(rot @ np.diag([1.0, -1.0, -1.0]).astype(np.float64))
+        rot = base.orthonormalize_rotation(rot @ camera_roll_flip_180_matrix(args.candidate_camera_forward_axis))
     pose_world_matrix[:3, :3] = rot
     quat = base.quat_xyzw_to_wxyz(R.from_matrix(rot).as_quat())
     pose_world_wxyz = np.concatenate([pose_world_matrix[:3, 3], quat]).astype(np.float64)
@@ -1349,6 +1376,7 @@ def build_candidate_pose_variant(
             forward_axis_change_deg(
                 base.orthonormalize_rotation(candidate.raw_pose_world_matrix[:3, :3]),
                 rot,
+                args.candidate_camera_forward_axis,
             )
         ),
         camera_up_selection_mode=selection_mode,
@@ -1384,23 +1412,13 @@ def postprocess_selected_keyframe_rolls(
     previous_rotation_world: Optional[np.ndarray] = None
     for idx, item in enumerate(selected_keyframes):
         if idx == 0:
-            chosen_rot, roll_debug = constrain_roll_keep_top_axis_up(
-                item.candidate.pose_world_matrix[:3, :3],
-                top_axis=args.candidate_camera_top_axis,
-            )
-            chosen_matrix = np.asarray(item.candidate.pose_world_matrix, dtype=np.float64).copy()
-            chosen_matrix[:3, :3] = chosen_rot
-            quat = base.quat_xyzw_to_wxyz(R.from_matrix(chosen_rot).as_quat())
-            chosen_pose = np.concatenate([chosen_matrix[:3, 3], quat]).astype(np.float64)
-            chosen_candidate = replace(
-                item.candidate,
-                pose_world_wxyz=chosen_pose,
-                pose_world_matrix=chosen_matrix,
-                top_axis_up_dot=top_axis_up_dot(chosen_rot, args.candidate_camera_top_axis),
-                original_top_axis_up_dot=float(roll_debug["original_top_axis_up_dot"]),
-                camera_up_flip_applied=int(roll_debug["camera_up_flip_applied"]),
-                forward_axis_change_deg=float(roll_debug["forward_axis_change_deg"]),
-                camera_up_selection_mode="keyframe1_keep_up",
+            variants = [
+                build_candidate_pose_variant(item.candidate, args, flip_roll_180=False, selection_mode="keyframe1_keep_up"),
+                build_candidate_pose_variant(item.candidate, args, flip_roll_180=True, selection_mode="keyframe1_keep_up"),
+            ]
+            chosen_candidate = max(
+                variants,
+                key=lambda cand: (float(cand.top_axis_up_dot), -int(cand.camera_up_flip_applied)),
             )
         else:
             chosen_candidate = choose_roll_variant_with_previous(previous_rotation_world, item.candidate, args)
@@ -7004,6 +7022,7 @@ def main() -> None:
         "reach_pos_tol_m": float(args.reach_pos_tol_m),
         "reach_rot_tol_deg": float(args.reach_rot_tol_deg),
         "candidate_keep_camera_up": int(args.candidate_keep_camera_up),
+        "candidate_camera_forward_axis": str(args.candidate_camera_forward_axis),
         "candidate_camera_top_axis": str(args.candidate_camera_top_axis),
         "candidate_target_local_x_offset_m": float(args.candidate_target_local_x_offset_m),
         "candidate_target_local_z_offset_m": float(args.candidate_target_local_z_offset_m),

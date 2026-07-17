@@ -54,3 +54,10 @@
 - 图片 scope 由 V4 metadata 决定：LEFT/RIGHT 只画对应手，BOTH 在同一 replay 背景画双手；缺少策略记录时显示 `MISSING`，不补默认 pose。
 - D435 AnyGrasp 视频只能从同 episode 的 D435 PNG 派生。`place_bread_basket` 缺 D435 结果时不替换旧广角结果；`pnp_tray` 缺 Dense-v2 时不以 V1 或其他 episode 冒充。
 - 大型源视频只在 config/manifest 中记录绝对路径；episode 包只保存生成的图、派生 AnyGrasp、合成视频和元数据，不复制源视频。
+
+## 2026-07-17：Canonical candidate 的朝上分支绕 local-Z 选择
+
+- `robot_replay` canonical candidate 固定以 local `+Z` 为 approach、local `+Y` 为开合、local `+X=+Y x +Z` 为相机/腕部上侧法线。
+- camera-up 只在 `R` 与 `R @ diag(-1,-1,+1)` 两个平行夹爪等价姿态间选择，要求 local `+X` 对 world `+Z` 非负；不得用旧 local-X-forward 的 `diag(+1,-1,-1)`。
+- 新轴参数必须显式传入；默认保持 `local_x/top=z`，不改变历史 planner、OursV2 或候选排序。
+- camera-up 只解决离散 roll 二义性，不把 IK miss 解释为坐标轴失败。论文视频必须保留执行失败说明；新 V4 输出隔离于 V3。

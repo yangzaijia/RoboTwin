@@ -54,3 +54,10 @@
 - Derive image scope from V4 metadata: LEFT/RIGHT draw only that arm and BOTH draws both arms on one replay background. A missing strategy record is labeled `MISSING`; no default pose is invented.
 - Derive a D435 AnyGrasp video only from D435 PNGs for the same episode. Do not replace missing `place_bread_basket` D435 output with legacy wide-camera output, and do not present V1 or another episode as missing `pnp_tray` Dense-v2.
 - Record large source videos as absolute paths in configs/manifests. An episode package stores generated images, derived AnyGrasp, the composed video, and metadata rather than copying source videos.
+
+## 2026-07-17: choose the canonical camera-up branch about local Z
+
+- Canonical `robot_replay` candidates define local `+Z` as approach, local `+Y` as jaw opening, and local `+X=+Y x +Z` as the camera/wrist-top normal.
+- Camera-up chooses only between the parallel-jaw-equivalent `R` and `R @ diag(-1,-1,+1)`, requiring nonnegative local-`+X` dot world-`+Z`. The legacy local-X-forward `diag(+1,-1,-1)` must not be reused.
+- The new axis arguments are explicit. Defaults remain `local_x/top=z`, preserving historical planners, OursV2, and candidate ranking.
+- Camera-up resolves a discrete roll ambiguity; it does not reinterpret an IK miss as a frame failure. Paper videos retain failure labels and V4 outputs remain isolated from V3.

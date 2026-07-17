@@ -37,6 +37,8 @@ CANDIDATE_ORIENTATION_REMAP_LABEL=identity
 CANDIDATE_SELECTION_MODE=planner
 CANDIDATE_MAX_ROTATION_DISTANCE_DEG=-1.0
 CANDIDATE_KEEP_CAMERA_UP=0
+CANDIDATE_CAMERA_FORWARD_AXIS=local_x
+CANDIDATE_CAMERA_TOP_AXIS=z
 ENFORCE_CANDIDATE_DISTANCE_CONSTRAINT=1
 CANDIDATE_TARGET_LOCAL_X_OFFSET_M=-0.05
 CANDIDATE_TARGET_LOCAL_Z_OFFSET_M=0.0
@@ -219,6 +221,14 @@ while (($# > 0)); do
       ;;
     --candidate_keep_camera_up)
       CANDIDATE_KEEP_CAMERA_UP="$2"
+      shift 2
+      ;;
+    --candidate_camera_forward_axis)
+      CANDIDATE_CAMERA_FORWARD_AXIS="$2"
+      shift 2
+      ;;
+    --candidate_camera_top_axis)
+      CANDIDATE_CAMERA_TOP_AXIS="$2"
       shift 2
       ;;
     --enforce_candidate_distance_constraint)
@@ -418,7 +428,7 @@ for TASK in "${TASKS[@]}"; do
     done
     IDS=("${FILTERED_IDS[@]}")
   fi
-  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
+  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} keep_camera_up=${CANDIDATE_KEEP_CAMERA_UP} camera_forward=${CANDIDATE_CAMERA_FORWARD_AXIS} camera_top=${CANDIDATE_CAMERA_TOP_AXIS} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
   for ID in "${IDS[@]}"; do
     ANY=${ANY_ROOT}/foundation_input_${ID}
     REPLAY=/home/zaijia001/ssd/data/piper/hand/${TASK}/foundation_replay_d435/foundation_input_${ID}
@@ -478,6 +488,8 @@ for TASK in "${TASKS[@]}"; do
       --candidate_selection_mode ${CANDIDATE_SELECTION_MODE} \
       --candidate_max_rotation_distance_deg ${CANDIDATE_MAX_ROTATION_DISTANCE_DEG} \
       --candidate_keep_camera_up ${CANDIDATE_KEEP_CAMERA_UP} \
+      --candidate_camera_forward_axis "${CANDIDATE_CAMERA_FORWARD_AXIS}" \
+      --candidate_camera_top_axis "${CANDIDATE_CAMERA_TOP_AXIS}" \
       --enforce_candidate_distance_constraint ${ENFORCE_CANDIDATE_DISTANCE_CONSTRAINT} \
       --candidate_orientation_remap_label ${CANDIDATE_ORIENTATION_REMAP_LABEL} \
       --left_target_object "$LEFT_OBJ" \

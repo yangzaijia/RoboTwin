@@ -270,3 +270,33 @@ board/board_zed_frame0000.png
 board/board_third_frame0000.png
 index.csv
 ```
+
+## 2026-07-17：Canonical local-Z 前进轴的 camera-up 规则
+
+`robot_replay` canonical candidate 的局部轴定义为：
+
+```text
+local +Z（蓝） = 夹爪前进 / approach 轴
+local +Y（绿） = 两指开合轴
+local +X（红） = (+Y) x (+Z)，即开合--前进平面的法线
+world +Z       = 上方
+```
+
+因此“手腕相机不要落在腕部下方”的离散约束是：
+
+```text
+dot(R[:, 0], world_up) >= 0
+```
+
+平行两指夹爪允许交换两根手指而保持同一物理抓取。Canonical local-Z 模式比较：
+
+```text
+R_base = R
+R_flip = R @ diag(-1, -1, +1)
+```
+
+`R_flip` 是绕 local `+Z` 的 180° roll，严格保持蓝色前进轴，只翻转红/绿轴。第一关键帧选择红轴朝上的分支；后续关键帧在两个等价分支中优先保持与上一关键帧的旋转连续性。`plan_summary.json` 记录 `original_top_axis_up_dot`、`top_axis_up_dot`、`camera_up_flip_applied`、`forward_axis_change_deg` 和选择模式。
+
+不要在 canonical local-Z candidate 上复用旧的 `diag(+1,-1,-1)`：旧矩阵是绕 local `+X` 翻转，适用于历史 local-X-forward 约定，但会反转 canonical local `+Z` 前进轴。代码因此新增显式 `--candidate_camera_forward_axis=local_x|local_z`；默认 `local_x` 保持旧行为。
+
+这条规则只消除平行夹爪的离散 wrist-roll 二义性，不改变候选编号、接近方向或目标位置，也不替代 IK 可达性/碰撞检查。OursV2 human-target replay 不经过该 AnyGrasp candidate 后处理。

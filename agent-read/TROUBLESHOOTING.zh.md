@@ -110,3 +110,10 @@
 
 - 正确路径是 `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`，不是 `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`。
 - 路径检查失败发生在导出器启动前，不会改写正式输出目录；修正解释器后再运行 `--overwrite`。
+
+## Canonical candidate 的腕部/相机看起来在夹爪下方
+
+- 症状：蓝色 local `+Z` 接近方向合理，但腕部绕蓝轴翻了 180°，红色 local `+X`（开合--前进平面法线）指向 world 下方。
+- 原因：旧 `--candidate_keep_camera_up` 只按 local-X-forward 使用 `diag(+1,-1,-1)`；canonical `robot_replay` 实际以 local `+Z` 为 forward，不能安全复用旧翻转。
+- 检查：在 `plan_summary.json` 查看 `candidate_camera_forward_axis`、`candidate_camera_top_axis`、`top_axis_up_dot`、`camera_up_flip_applied` 和 `forward_axis_change_deg`。canonical 期望 `local_z`、`x`、up dot 非负、被翻转时 forward change 约 0°。
+- 处理：显式传 `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`。这只在两个平行夹爪等价 roll 分支间选择，不保证 IK 成功；不要用增加 replan 次数掩盖 IK 分支发散。

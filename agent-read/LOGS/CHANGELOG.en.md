@@ -3349,3 +3349,13 @@ Validation: `py_compile` in `RoboTwin_bw`, exporter dry-run, 20-candidate object
 - Orientation/Fused use `L16/R5` and `L14/R16` at frames 38/78 and complete successfully. Top-score uses `L0/R3` and `L0/R1`; its final left-arm action misses by `0.0536 m` and is explicitly labeled.
 
 Validation: local/remote `bash -n`, valid/invalid group dry-runs, all three planner runs, both compositor dry-runs, manifest available-path audits, ffprobe, full decode of both H.264/yuv420p/30-fps/21.4-s outputs, and t=8/16 s visual QA passed. The first 4x5 QA found three overlapping long labels; shortened labels were re-encoded and rechecked. A temporary heredoc frame-extraction parse error and missing `jq` only affected QA commands; standalone FFmpeg/Python checks completed the audit.
+
+## 2026-07-17 (Canonical candidate camera-up V4)
+
+- Fixed the mismatch between the legacy camera-up rule and canonical `robot_replay` axes. The old rule always rolled about local X; V4 accepts an explicit local-X/local-Z forward axis, using `R @ diag(-1,-1,+1)` for the canonical local-Z roll.
+- Local X/Y/Z may now be the top axis, `plan_summary.json` records `candidate_camera_forward_axis`, and the wrapper forwards both axis options while retaining legacy `local_x/top=z` defaults.
+- Added four regression tests: unchanged legacy local-X behavior, canonical local-Z flip with upward plane normal and zero approach-axis change, no change for an already-up canonical pose, and correct flip provenance when the first keyframe is rebuilt from its raw pose.
+- Added isolated Orientation, Fused, and Top-score V4 outputs plus a 2x2 paper video for `pick_diverse_bottles/id0`; V3 and OursV2 remain untouched. Orientation/Fused flip both left keyframes and neither right keyframe; Top-score flips only left frame 38.
+- Orientation and Fused select identical candidates in this episode. An independent Fused run diverged through the single-seed IK branch, so the final tile reuses the complete Orientation V4 render and records that fact in config/manifest. Top-score safely stops after a `35.7 mm` right grasp miss and freezes its final frame.
+
+Validation: `py_compile`, `bash -n`, wrapper dry-run, and direct execution of all four regressions passed. The environment lacks `pytest`, so the test also supports direct execution. V4 compositor dry-run, source ffprobes, H.264 High/yuv420p/1280x796/30-fps/642-frame/21.4-s output, full decode, and t=4/8/17 visual QA passed. One retry3 worsened the later grasp and is explicitly excluded. One wrong V3 path, one `fmpeg` typo, and one local/remote-workdir mistake affected temporary frame-extraction QA only and did not rewrite formal outputs.

@@ -1036,3 +1036,52 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
 Fused uses the same approach-axis summary with group `fused`. Canonical Top-score uses the score-only preview root `anygrasp_h2o_preview_d435_robot_frame_topscore_canonical_v3_full` and reuses its `fused` group because that summary's fused weights are `1.0 score + 0.0 orientation`.
 
 For `pick_diverse_bottles/id0`, Orientation/Fused use `L16/R5` at frame 38 and `L14/R16` at frame 78, and both executions succeed. Top-score uses `L0/R3` and `L0/R1`; its final left-arm action misses by `0.0536 m`. These are planner visualizations, not physical grasp-validity proofs.
+
+## L15.19.5: Canonical candidate camera-up V4
+
+Axis contract: local `+Z` (blue) is approach, local `+Y` (green) is jaw opening, and local `+X` (red) is their plane normal. The following options choose the red-up branch between two parallel-jaw-equivalent poses without changing local `+Z`.
+
+Parameter template (not directly runnable):
+
+```bash
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --tasks <TASK> --ids <ID> \
+  --preview_root <CANONICAL_PREVIEW_ROOT> \
+  --reuse_preview_candidate_group <orientation|fused> \
+  --output_root <ISOLATED_V4_OUTPUT_ROOT> \
+  --candidate_keep_camera_up 1 \
+  --candidate_camera_forward_axis local_z \
+  --candidate_camera_top_axis x \
+  --candidate_target_local_x_offset_m 0.0 \
+  --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12
+```
+
+Runnable `pick_diverse_bottles/id0` Orientation command:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
+  --gpu 2 --max_per_task 1 --tasks pick_diverse_bottles --ids 0 \
+  --output_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v4_orientation_approach_camera_up_20260717 \
+  --preview_root /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_v3_full \
+  --reuse_preview_candidate_group orientation \
+  --trajectory_mode cartesian_interp_ik --cartesian_auto_step_m 0.03 \
+  --replan_attempts 1 --allow_partial_dual_stage --execute_partial_cartesian_plan \
+  --ik_max_position_threshold_m 0.02 --ik_max_rotation_threshold_rad 3.14 \
+  --candidate_selection_mode planner --candidate_keep_camera_up 1 \
+  --candidate_camera_forward_axis local_z --candidate_camera_top_axis x \
+  --candidate_target_local_x_offset_m 0.0 --candidate_target_local_z_offset_m -0.05 \
+  --approach_axis local_z --approach_offset_m 0.12 \
+  --debug_gripper_actor_forward_axis local_z --visualize_targets
+```
+
+2x2 deliverable and configuration:
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4_config.json
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v4_camera_up_candidate_videos/CAMERA_UP_V4_NOTES.md
+```
+
+Orientation and Fused select identical candidates in this episode. The final Fused tile reuses the complete Orientation V4 render to avoid presenting single-seed IK branch randomness as a strategy difference. Top-score V4 safely stops after a `0.0357 m` right grasp miss and freezes its last frame. This is a pose/retargeting diagnostic, not an execution-success comparison.

@@ -235,3 +235,33 @@ Recommended sequence:
 2. Expand to `CASE_MODE=axis90`.
 3. Run longer sequences or right-hand checks only for visually plausible candidates.
 4. If a candidate looks right but succeeds rarely, tune `TARGET_DY/TARGET_DZ` and the IK initial state before continuing to scan more rotations.
+
+## 2026-07-17: camera-up rule for canonical local-Z approach
+
+Canonical `robot_replay` candidate axes are:
+
+```text
+local +Z (blue)  = gripper approach axis
+local +Y (green) = parallel-jaw opening axis
+local +X (red)   = (+Y) x (+Z), the opening--approach-plane normal
+world +Z         = up
+```
+
+The discrete preference that keeps the wrist-camera/top side above the wrist is therefore:
+
+```text
+dot(R[:, 0], world_up) >= 0
+```
+
+A parallel-jaw gripper may exchange its fingers without changing the physical grasp. Canonical local-Z mode compares:
+
+```text
+R_base = R
+R_flip = R @ diag(-1, -1, +1)
+```
+
+`R_flip` is a 180-degree roll about local `+Z`: it preserves the blue approach axis exactly and flips only red/green. The first keyframe establishes the upward branch; later keyframes select between the two equivalent branches for rotational continuity. `plan_summary.json` records `original_top_axis_up_dot`, `top_axis_up_dot`, `camera_up_flip_applied`, `forward_axis_change_deg`, and the selection mode.
+
+Do not reuse legacy `diag(+1,-1,-1)` for canonical local-Z candidates. That matrix rolls about local `+X`; it is correct for the historical local-X-forward contract but reverses canonical local `+Z`. The implementation therefore adds explicit `--candidate_camera_forward_axis=local_x|local_z`, retaining `local_x` as the backward-compatible default.
+
+This rule only resolves the parallel-jaw wrist-roll ambiguity. It does not change candidate identity, approach direction, or target position, and it does not replace IK reachability or collision checks. OursV2 human-target replay does not use this AnyGrasp-candidate post-processing.
