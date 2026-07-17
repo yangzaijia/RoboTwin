@@ -252,6 +252,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--execute_partial_cartesian_plan", type=int, default=0, help="If 1, cartesian_interp_ik plans that fail at an intermediate waypoint still execute the successfully solved waypoint prefix as a Partial plan. Diagnostic only; reached remains false unless the final target is reached.")
     parser.add_argument("--piper_urdfik_apply_global_trans_to_ik", type=int, default=0, help="Piper diagnostic only. If 1, additionally remove global_trans_matrix from the gripper target before URDFIK. Default 0 matches the direct Piper hand replay convention.")
+    parser.add_argument("--piper_urdfik_apply_curobo_to_sapien_link_rotation", type=int, default=0, help="Piper-only compatibility switch. If 1, convert Curobo link6 axes to the SAPIEN piper_pika_agx link6 axes with the calibrated local Ry(-90 deg) adapter. Default 0 preserves legacy paths.")
     parser.add_argument("--left_target_object", type=str, default="cup")
     parser.add_argument("--right_target_object", type=str, default="bottle")
     parser.add_argument("--candidate_max_rotation_distance_deg", type=float, default=-1.0, help="If >= 0, drop planner candidates whose hand-orientation rotation distance exceeds this threshold before selection.")
@@ -266,7 +267,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate_post_rot_xyz_deg", type=float, nargs=3, default=[0.0, 0.0, 0.0])
     parser.add_argument("--candidate_keep_camera_up", type=int, default=0, help="If 1, keep the gripper/camera top side facing upward overall while preserving the original grasp direction. The planner only resolves the redundant 180-degree roll about --candidate_camera_forward_axis.")
     parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. local_x retains the legacy AnyGrasp/R1 behavior; local_z is for canonical robot-replay candidates.")
-    parser.add_argument("--candidate_camera_top_axis", choices=["x", "y", "z"], default="z", help="Local gripper axis treated as the camera/top direction when --candidate_keep_camera_up=1. For canonical local-Z-forward parallel jaws, use x because local Y is the opening axis and Y cross Z equals X.")
+    parser.add_argument("--candidate_camera_top_axis", choices=["x", "y", "z"], default="z", help="Local gripper axis used by the camera/top preference when --candidate_keep_camera_up=1.")
+    parser.add_argument("--candidate_camera_top_axis_sign", type=int, choices=[-1, 1], default=1, help="Signed direction of --candidate_camera_top_axis. Legacy behavior is +1. Canonical local-Z-forward Piper uses x with -1 because approach cross opening is Z cross Y = -X and the 0515 wrist camera is mounted primarily on the local -X side.")
     parser.add_argument("--candidate_target_local_x_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +X before planning/visualization. In the default identity AnyGrasp frame this is the AnyGrasp finger-depth axis, which is not the same convention as direct hand replay's local +Z approach axis.")
     parser.add_argument("--candidate_target_local_z_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +Z before planning/visualization. Use this with --candidate_orientation_remap_label swap_red_blue to reproduce the direct replay convention where blue local +Z is the approach/forward axis.")
     parser.add_argument("--manual_candidate", type=str, nargs=3, action="append", default=[], metavar=("FRAME", "ARM", "CANDIDATE_IDX"), help="Optional manual candidate override, e.g. --manual_candidate 1 left 5. Partial overrides only reorder debug display; full two-frame overrides for one arm drive selection directly.")
@@ -440,7 +442,11 @@ def preview_candidate_entry_to_pose(
         nearest_object=str(entry.get("nearest_object", "")),
         nearest_object_distance_m=float(entry.get("nearest_object_distance_m", 0.0)),
         rotation_distance_deg=float(entry.get("rotation_distance_deg", 0.0)),
-        top_axis_up_dot=top_axis_up_dot(pose_world_matrix[:3, :3], args.candidate_camera_top_axis),
+        top_axis_up_dot=top_axis_up_dot(
+            pose_world_matrix[:3, :3],
+            args.candidate_camera_top_axis,
+            args.candidate_camera_top_axis_sign,
+        ),
         original_top_axis_up_dot=float(roll_debug["original_top_axis_up_dot"]),
         camera_up_flip_applied=int(roll_debug["camera_up_flip_applied"]),
         forward_axis_change_deg=float(roll_debug["forward_axis_change_deg"]),
@@ -651,12 +657,29 @@ def load_reused_preview_summary(
                 break
             candidate_key = f"{arm}_{group_suffix}"
             ranked_entries = list(frame_entry.get("top_candidates", {}).get(candidate_key, []))
-            if rank_index >= len(ranked_entries):
+            manual_candidate_idx = (
+                getattr(args, "manual_candidate_overrides", {})
+                .get(arm, {})
+                .get(int(frame))
+            )
+            selected_rank_index = rank_index
+            if manual_candidate_idx is not None:
+                selected_rank_index = next(
+                    (
+                        idx
+                        for idx, entry in enumerate(ranked_entries)
+                        if int(entry.get("candidate_idx", -1)) == int(manual_candidate_idx)
+                    ),
+                    -1,
+                )
+            if selected_rank_index < 0 or selected_rank_index >= len(ranked_entries):
                 failed = True
                 diagnostics[int(frame)] = {
                     "preview_frame_present": 1,
                     "preview_candidate_count": int(len(ranked_entries)),
                     "requested_rank": int(args.reuse_preview_top_rank),
+                    "manual_candidate_idx": None if manual_candidate_idx is None else int(manual_candidate_idx),
+                    "manual_candidate_found": 0 if manual_candidate_idx is not None else None,
                 }
                 break
             ref_key = f"{arm}_reference_hand_frame"
@@ -669,7 +692,7 @@ def load_reused_preview_summary(
                 args=args,
                 arm=arm,
                 frame=int(frame),
-                entry=ranked_entries[rank_index],
+                entry=ranked_entries[selected_rank_index],
             )
             selected_keyframes.append(
                 SelectedKeyframe(
@@ -682,7 +705,9 @@ def load_reused_preview_summary(
             diagnostics[int(frame)] = {
                 "preview_frame_present": 1,
                 "preview_candidate_count": int(len(ranked_entries)),
-                "selected_preview_rank": int(args.reuse_preview_top_rank),
+                "selected_preview_rank": int(selected_rank_index + 1),
+                "manual_candidate_idx": None if manual_candidate_idx is None else int(manual_candidate_idx),
+                "manual_candidate_found": 1 if manual_candidate_idx is not None else None,
                 "reference_hand_frame": int(ref_frame),
             }
         if failed:
@@ -808,6 +833,9 @@ def build_renderer(args: argparse.Namespace) -> ReplayRenderer:
         renderer_kwargs["urdfik_max_joint_step_rad"] = float(args.urdfik_max_joint_step_rad)
         renderer_kwargs["urdfik_execute_partial_cartesian_plan"] = bool(args.execute_partial_cartesian_plan)
         renderer_kwargs["urdfik_apply_global_trans_to_ik"] = bool(args.piper_urdfik_apply_global_trans_to_ik)
+        renderer_kwargs["urdfik_apply_curobo_to_sapien_link_rotation"] = bool(
+            args.piper_urdfik_apply_curobo_to_sapien_link_rotation
+        )
     renderer = renderer_cls(**renderer_kwargs)
     # Apply wrist camera tuning (same convention as O.1 envs/camera/camera.py)
     renderer._wrist_camera_tuning = {
@@ -1274,7 +1302,11 @@ def candidate_to_world_pose(
     pose_world_matrix = pose_wxyz_to_matrix(pose_world_wxyz)
     original_rotation_world = raw_pose_world_matrix[:3, :3].copy()
     roll_debug = {
-        "original_top_axis_up_dot": top_axis_up_dot(original_rotation_world, args.candidate_camera_top_axis),
+        "original_top_axis_up_dot": top_axis_up_dot(
+            original_rotation_world,
+            args.candidate_camera_top_axis,
+            args.candidate_camera_top_axis_sign,
+        ),
         "camera_up_flip_applied": 0,
         "forward_axis_change_deg": 0.0,
     }
@@ -1282,6 +1314,7 @@ def candidate_to_world_pose(
         pose_world_matrix[:3, :3], roll_debug = constrain_roll_keep_top_axis_up(
             pose_world_matrix[:3, :3],
             top_axis=args.candidate_camera_top_axis,
+            top_axis_sign=args.candidate_camera_top_axis_sign,
             forward_axis=args.candidate_camera_forward_axis,
         )
         quat = base.quat_xyzw_to_wxyz(R.from_matrix(base.orthonormalize_rotation(pose_world_matrix[:3, :3])).as_quat())
@@ -1289,9 +1322,9 @@ def candidate_to_world_pose(
     return raw_pose_world_wxyz, raw_pose_world_matrix, pose_world_wxyz, pose_world_matrix, roll_debug
 
 
-def top_axis_up_dot(rotation_world: np.ndarray, top_axis: str) -> float:
+def top_axis_up_dot(rotation_world: np.ndarray, top_axis: str, top_axis_sign: int = 1) -> float:
     axis_idx = {"x": 0, "y": 1, "z": 2}[str(top_axis)]
-    axis_vec = np.asarray(rotation_world, dtype=np.float64).reshape(3, 3)[:, axis_idx]
+    axis_vec = float(top_axis_sign) * np.asarray(rotation_world, dtype=np.float64).reshape(3, 3)[:, axis_idx]
     return float(np.dot(axis_vec, np.array([0.0, 0.0, 1.0], dtype=np.float64)))
 
 
@@ -1326,13 +1359,14 @@ def forward_axis_change_deg(
 def constrain_roll_keep_top_axis_up(
     rotation_world: np.ndarray,
     top_axis: str,
+    top_axis_sign: int = 1,
     forward_axis: str = "local_x",
 ) -> Tuple[np.ndarray, Dict[str, float]]:
     rot = base.orthonormalize_rotation(rotation_world)
     roll_flip_180 = camera_roll_flip_180_matrix(forward_axis)
     rot_flipped = base.orthonormalize_rotation(rot @ roll_flip_180)
-    base_dot = top_axis_up_dot(rot, top_axis)
-    flipped_dot = top_axis_up_dot(rot_flipped, top_axis)
+    base_dot = top_axis_up_dot(rot, top_axis, top_axis_sign)
+    flipped_dot = top_axis_up_dot(rot_flipped, top_axis, top_axis_sign)
     if flipped_dot > base_dot + 1e-9:
         chosen = rot_flipped
         flip_applied = 1
@@ -1369,8 +1403,16 @@ def build_candidate_pose_variant(
         candidate,
         pose_world_wxyz=pose_world_wxyz,
         pose_world_matrix=pose_world_matrix,
-        top_axis_up_dot=top_axis_up_dot(rot, args.candidate_camera_top_axis),
-        original_top_axis_up_dot=top_axis_up_dot(base.orthonormalize_rotation(candidate.raw_pose_world_matrix[:3, :3]), args.candidate_camera_top_axis),
+        top_axis_up_dot=top_axis_up_dot(
+            rot,
+            args.candidate_camera_top_axis,
+            args.candidate_camera_top_axis_sign,
+        ),
+        original_top_axis_up_dot=top_axis_up_dot(
+            base.orthonormalize_rotation(candidate.raw_pose_world_matrix[:3, :3]),
+            args.candidate_camera_top_axis,
+            args.candidate_camera_top_axis_sign,
+        ),
         camera_up_flip_applied=int(bool(flip_roll_180)),
         forward_axis_change_deg=float(
             forward_axis_change_deg(
@@ -1503,7 +1545,11 @@ def build_ranked_candidates_for_arm(
                 nearest_object=nearest_name,
                 nearest_object_distance_m=nearest_dist,
                 rotation_distance_deg=rotation_distance_deg(ref_rotation, grasp["rotation_matrix"]),
-                top_axis_up_dot=top_axis_up_dot(pose_world_matrix[:3, :3], args.candidate_camera_top_axis),
+                top_axis_up_dot=top_axis_up_dot(
+                    pose_world_matrix[:3, :3],
+                    args.candidate_camera_top_axis,
+                    args.candidate_camera_top_axis_sign,
+                ),
                 original_top_axis_up_dot=float(roll_debug["original_top_axis_up_dot"]),
                 camera_up_flip_applied=int(roll_debug["camera_up_flip_applied"]),
                 forward_axis_change_deg=float(roll_debug["forward_axis_change_deg"]),
@@ -3825,6 +3871,14 @@ def planned_eval_pose_from_plan(
     gripper_bias = 0.12 if robot is None else float(getattr(robot, f"{arm}_gripper_bias", 0.12))
     if global_trans is not None and delta_matrix is not None:
         link_world = pose_wxyz_to_matrix(ee_world_wxyz)
+        if bool(getattr(renderer, "urdfik_apply_curobo_to_sapien_link_rotation", False)):
+            curobo_to_sapien = np.asarray(
+                getattr(renderer, "curobo_to_sapien_link_rotation"),
+                dtype=np.float64,
+            ).reshape(3, 3)
+            link_world[:3, :3] = base.orthonormalize_rotation(
+                link_world[:3, :3] @ curobo_to_sapien
+            )
         report_rot = base.orthonormalize_rotation(
             link_world[:3, :3]
             @ np.asarray(global_trans, dtype=np.float64).reshape(3, 3)
@@ -3964,13 +4018,16 @@ def get_current_arm_joint_vector(renderer: ReplayRenderer, arm: str) -> np.ndarr
     raise ValueError(f"Unsupported arm: {arm}")
 
 
-def joint_error_metrics(current_joints: np.ndarray, target_joints: np.ndarray) -> Dict[str, float]:
+def joint_error_metrics(current_joints: np.ndarray, target_joints: np.ndarray) -> Dict[str, object]:
     current_joints = np.asarray(current_joints, dtype=np.float64).reshape(-1)
     target_joints = np.asarray(target_joints, dtype=np.float64).reshape(-1)
     delta = target_joints - current_joints
     return {
         "max_abs_err_rad": float(np.max(np.abs(delta))) if delta.size > 0 else 0.0,
         "l2_err_rad": float(np.linalg.norm(delta)),
+        "current_joints_rad": current_joints.tolist(),
+        "target_joints_rad": target_joints.tolist(),
+        "delta_joints_rad": delta.tolist(),
     }
 
 
@@ -3982,7 +4039,7 @@ def settle_arms_to_targets(
     attached_actor_by_arm: Optional[Dict[str, Optional[sapien.Entity]]] = None,
     tcp_to_object_by_arm: Optional[Dict[str, Optional[np.ndarray]]] = None,
     object_replay: Optional[ExecutionObjectReplayConfig] = None,
-) -> Dict[str, Dict[str, float]]:
+) -> Dict[str, Dict[str, object]]:
     arms = [arm for arm in ("left", "right") if arm in target_joints_by_arm]
     targets = {
         arm: np.asarray(target_joints_by_arm[arm], dtype=np.float64).reshape(6)
@@ -3991,8 +4048,8 @@ def settle_arms_to_targets(
     max_wait_steps = max(int(max_wait_steps), 0)
     tol_rad = float(tol_rad)
 
-    def _collect() -> Dict[str, Dict[str, float]]:
-        metrics: Dict[str, Dict[str, float]] = {}
+    def _collect() -> Dict[str, Dict[str, object]]:
+        metrics: Dict[str, Dict[str, object]] = {}
         for arm_name in arms:
             metrics[arm_name] = joint_error_metrics(get_current_arm_joint_vector(renderer, arm_name), targets[arm_name])
         return metrics
@@ -4024,6 +4081,21 @@ def settle_arms_to_targets(
                 set_actor_pose(actor, np.concatenate([object_world[:3, 3], quat]))
         renderer.step_scene(steps=1)
         final_metrics = _collect()
+
+    for arm_name, metrics in final_metrics.items():
+        if float(metrics["max_abs_err_rad"]) <= tol_rad:
+            continue
+        current = np.asarray(metrics["current_joints_rad"], dtype=np.float64)
+        target = np.asarray(metrics["target_joints_rad"], dtype=np.float64)
+        delta = np.asarray(metrics["delta_joints_rad"], dtype=np.float64)
+        print(
+            f"[joint-settle-miss] arm={arm_name} "
+            f"max_err={float(metrics['max_abs_err_rad']):.4f}rad "
+            f"target={np.round(target, 4).tolist()} "
+            f"current={np.round(current, 4).tolist()} "
+            f"delta={np.round(delta, 4).tolist()}",
+            flush=True,
+        )
 
     return final_metrics
 
@@ -7012,6 +7084,7 @@ def main() -> None:
         "urdfik_max_joint_step_rad": float(args.urdfik_max_joint_step_rad),
         "execute_partial_cartesian_plan": int(args.execute_partial_cartesian_plan),
         "piper_urdfik_apply_global_trans_to_ik": int(args.piper_urdfik_apply_global_trans_to_ik),
+        "piper_urdfik_apply_curobo_to_sapien_link_rotation": int(args.piper_urdfik_apply_curobo_to_sapien_link_rotation),
         "execute_interp_steps": int(args.execute_interp_steps),
         "joint_trajectory_interpolation": str(args.joint_trajectory_interpolation),
         "settle_steps": int(args.settle_steps),
@@ -7024,6 +7097,7 @@ def main() -> None:
         "candidate_keep_camera_up": int(args.candidate_keep_camera_up),
         "candidate_camera_forward_axis": str(args.candidate_camera_forward_axis),
         "candidate_camera_top_axis": str(args.candidate_camera_top_axis),
+        "candidate_camera_top_axis_sign": int(args.candidate_camera_top_axis_sign),
         "candidate_target_local_x_offset_m": float(args.candidate_target_local_x_offset_m),
         "candidate_target_local_z_offset_m": float(args.candidate_target_local_z_offset_m),
         "approach_axis": str(args.approach_axis),

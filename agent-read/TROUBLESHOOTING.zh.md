@@ -117,3 +117,18 @@
 - 原因：旧 `--candidate_keep_camera_up` 只按 local-X-forward 使用 `diag(+1,-1,-1)`；canonical `robot_replay` 实际以 local `+Z` 为 forward，不能安全复用旧翻转。
 - 检查：在 `plan_summary.json` 查看 `candidate_camera_forward_axis`、`candidate_camera_top_axis`、`top_axis_up_dot`、`camera_up_flip_applied` 和 `forward_axis_change_deg`。canonical 期望 `local_z`、`x`、up dot 非负、被翻转时 forward change 约 0°。
 - 处理：显式传 `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`。这只在两个平行夹爪等价 roll 分支间选择，不保证 IK 成功；不要用增加 replan 次数掩盖 IK 分支发散。
+
+## V4 相机仍朝下，且 6--10 秒发生腕部旋转
+
+- 症状：V4 中 Orientation/Fused/Top-score 最终看起来相机朝下，中段坐标轴突然 roll；红轴朝上但真实相机安装侧反而在下方。
+- 根因 1：V4 把红色 local `+X` 当成相机顶面；0515 外参显示相机主体实际在 link6 local `-X` 侧，判据符号反了。
+- 根因 2：V4 没有应用 `R_sapien_link6 = R_curobo_link6 @ Ry(-90°)`，规划轴与画面中的 SAPIEN link6 存在固定旋转差。
+- 根因 3：V4 使用单 seed、逐 Cartesian waypoint IK，并允许最大约 180° 的旋转误差，容易在中途切换 wrist IK 分支。
+- 修复：使用 V5 参数 `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1 --piper_apply_global_trans_to_ik 1 --piper_apply_curobo_to_sapien_link_rotation 1 --trajectory_mode joint_interp --joint_interp_waypoints 40 --ik_num_seeds 64 --ik_solution_selection joint_continuity`。
+- 验证：从 `pose_debug.jsonl` 计算每帧 `-R_world[2,0]`，所有候选阶段必须保持大于 0；不要用红 `+X` 是否朝上判断相机是否朝上。
+
+## Camera-up target 的 FK 正确但实际执行固定 miss
+
+- 诊断：查看 `[joint-settle-miss]` 的逐关节 target/current/delta。若 target 精确等于 URDF 上/下限，说明候选落在关节边界，不是坐标轴又错了。
+- `pick_diverse_bottles/id0` raw Top-score K2-left `#0` 的 J5 为 `+1.2217 rad` 上限，实际 action miss 约 `57 mm`；使用同一排序中下一项 mount-up/IK/joint-limit-feasible 的 `#3` 后降为 `3.0 mm`。
+- 不应靠放宽 reach tolerance 把该失败标成成功；输出必须把替代候选标成 constrained/feasible。

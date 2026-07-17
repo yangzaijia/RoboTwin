@@ -3357,3 +3357,15 @@ Validation: 本地/远端 `bash -n`、合法/非法 group dry-run、三个 plann
 - Fused 与 Orientation 该集候选完全相同；独立 Fused IK 因单-seed 分支发散，最终格复用完整 Orientation V4 并在 config/manifest 记录。Top-score 右 grasp miss `35.7 mm` 后安全停止并冻结末帧。
 
 Validation: `py_compile`、`bash -n`、wrapper dry-run、直接运行四项回归测试通过；环境缺 `pytest`，因此测试文件同时支持直接执行。V4 compositor dry-run、源视频 ffprobe、成品 H.264 High/yuv420p/1280×796/30 fps/642 帧/21.4 s、完整解码和 t=4/8/17 s 视觉 QA 通过。一次 retry3 使后续 grasp 更差，明确排除。抽帧期间一次错误 V3 路径、一次 `fmpeg` 拼写和一次错误本地远端 workdir 仅影响临时 QA，均未改写正式输出。
+
+## 2026-07-17（Calibrated camera-mount-up V5）
+
+- 推翻 V4 的 0515 camera-up 符号：canonical 调试轴仍为 X 红、Y 绿、Z 蓝，但标定腕部相机位于 link6 local `-X` 侧；正式 mount-up 使用 `dot(-R[:,0], world +Z)>0`。新增向后兼容的 `candidate_camera_top_axis_sign`，旧默认 `+1` 不变。
+- Piper URDFIK 新增可选 Curobo-link6→SAPIEN-link6 local `Ry(-90°)` adapter，并与原有 Piper global-axis 适配分开控制/记录；planner FK 报告同步使用相同 adapter。
+- 修复 reuse-preview 路径忽略 `--manual_candidate`、Piper child 提前 pop `urdfik_joint_interp_waypoints` 导致 40 被父类默认 2 覆盖、URDFIK 失败日志缺 rotation error 三项问题。
+- wrapper 新增并透传 `--candidate_camera_top_axis_sign`、四组手动候选、64 seeds、Curobo/SAPIEN link adapter、reach rotation tolerance，以及向后兼容的 `--ik_solution_selection=pose_error|joint_continuity`。
+- `settle_arms_to_targets` 在未收敛时记录逐关节 target/current/delta；该诊断确认 raw Top-score K2-left `#0` 的 J5 精确位于 `+1.2217 rad` 上限，产生 `57 mm` action miss。正式 constrained Top-score 改用同一排序下一项 feasible `#3`。
+- `pick_diverse_bottles/id0` 的 Orientation/Fused 使用 K1 `L16/R9`、K2 `L19/R16`；Top-score-feasible 使用 K1 `L1/R3`、K2 `L3/R1`。三阶段全部 reached，`execution_failed=false`；OursV2 原视频不修改。
+- 新 2×2 输出位于 `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/`，包含 MP4、config、manifest 和中英说明。三条候选 replay 15.2 s 以 `15.2/21.4` 速度同步 OursV2，标题栏独立于画面。
+
+Validation: 本地/远端 `py_compile`、`bash -n`、非法 solution-selection 枚举、wrapper dry-run 和 `tests/test_anygrasp_camera_up.py` 五项回归通过。两条正式 replay 的每帧 `-X·up` 全部为正（候选阶段约 `+0.695～+0.995`），所有源与成品通过 ffprobe；成品为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，并完成 6/8/10 秒和末帧视觉 QA。物体碰撞关闭，因此只作为定性 retargeting 可视化，不作为物理抓取成功率。

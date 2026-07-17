@@ -7,12 +7,12 @@
 
 ## Added in this change
 
-- Canonical `robot_replay` candidates now have an explicit camera-up equivalent-pose constraint: blue local `+Z` remains the approach axis, green local `+Y` is the jaw-opening axis, and red local `+X = +Y x +Z` is the opening--approach-plane normal. The rule chooses between `R` and `R @ diag(-1,-1,+1)` so red points toward world `+Z`.
-- `--candidate_camera_forward_axis local_z --candidate_camera_top_axis x` acts only when explicitly requested. Legacy defaults remain `local_x/top=z`; historical wrapper behavior and OursV2 are unchanged.
-- The `pick_diverse_bottles/id0` V4 2x2 is under `paper_qualitative_assets/.../id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4`. Orientation/Fused flip both left keyframes and neither right keyframe; Top-score flips only left frame 38. Every applied flip changes local `+Z` by 0 degrees.
-- V4 fixes only the redundant wrist-roll branch; it does not make single-seed Cartesian IK deterministic. Orientation completes the sequence with recorded left-arm misses. Top-score safely stops after a `35.7 mm` right grasp miss and freezes its final frame. A three-replan retry was worse and is excluded from the deliverable.
-- The `pick_diverse_bottles/id0` approach-axis Orientation, Fused, and canonical Top-score selections now have isolated planner replays. The wrapper accepts `--reuse_preview_candidate_group=orientation|fused` while retaining `orientation` as its default.
-- New paper assets include a 2x2 strategy-execution video and a 4x5 full-pipeline video with separate headers. Orientation/Fused succeed; Top-score has a `53.6 mm` left-arm action miss that is explicitly labeled. Historical Stage-2 repaints are not paired with the new candidates.
+- V4 incorrectly treated red local `+X` as the top side of the calibrated 0515 wrist camera. The camera is mounted primarily on the link6 local `-X` side. Canonical axes remain blue `+Z` approach, green `+Y` jaw opening, and red `+X=+Y×+Z`, but mount-up is `dot(-R[:,0], world +Z)>0`; a downward red arrow is normally evidence that the camera side is up.
+- V5 adds `--candidate_camera_top_axis_sign=-1` and applies both the Piper global-axis conversion and the fixed Curobo-to-SAPIEN link6 local `Ry(-90 deg)` adapter. Legacy defaults remain 0/+1, preserving historical planners, V1-V4, and OursV2.
+- The V4 wrist roll around 6-10 seconds came from Cartesian waypoint IK, one seed, an approximately 180-degree relaxed rotation threshold, and the missing link6 adapter. V5 uses endpoint IK, 40-waypoint joint interpolation, 64 seeds, and optional `joint_continuity` solution selection.
+- The formal `pick_diverse_bottles/id0` V5 2x2 is under `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/candidate_retarget_grid_2x2_camera_mount_up_v5.mp4`. Orientation/Fused use K1 `L16/R9`, K2 `L19/R16`; constrained Top-score uses K1 `L1/R3`, K2 `L3/R1`; OursV2 is unchanged.
+- Raw K2-left Top-score candidate `#0` puts J5 exactly at its `+1.2217 rad` upper limit and produces a `57 mm` action miss. Using the next score-ranked mount-up/IK/joint-limit-feasible candidate `#3` reduces left/right action error to `3.0/7.7 mm`, with every stage reached.
+- Actual `-X·up` stays positive in every recorded V5 frame (approximately `+0.695..+0.995` after candidate acquisition), and both replays report `execution_failed=false`. The final grid is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds, with separate headers. Object collisions are disabled, so it is a qualitative retargeting visualization rather than a physics-valid grasp benchmark.
 - Planner targets, current readback, reach checks, and visualization all use `T_W_RTCP`.
 - SAPIEN `L6_SIM` and CuRobo/server `L6_URDF` share an origin but differ by exact local-axis `Ry(+pi/2)`. Adapted same-q FK error is below `7.5e-8 m / 0.000016 deg`.
 - The server tool remains literal `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`. Preview `CGRASP -> RTCP` remapping is a separate transform.
@@ -33,6 +33,7 @@
 4. `PIPER_CANONICAL_TCP_V1.en.md`
 5. `COMMANDS/piper_canonical_tcp_v1.en.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.en.md`
+7. `COMMANDS/candidate_camera_mount_up_v5.en.md`
 
 ## 2026-07-16 addendum
 

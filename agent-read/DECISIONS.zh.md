@@ -61,3 +61,11 @@
 - camera-up 只在 `R` 与 `R @ diag(-1,-1,+1)` 两个平行夹爪等价姿态间选择，要求 local `+X` 对 world `+Z` 非负；不得用旧 local-X-forward 的 `diag(+1,-1,-1)`。
 - 新轴参数必须显式传入；默认保持 `local_x/top=z`，不改变历史 planner、OursV2 或候选排序。
 - camera-up 只解决离散 roll 二义性，不把 IK miss 解释为坐标轴失败。论文视频必须保留执行失败说明；新 V4 输出隔离于 V3。
+
+## 2026-07-17：V5 以 0515 相机安装侧 `-X` 为正式 mount-up
+
+- 上一节的 local `+X` 朝上只保留为 V4 历史，不能再用于 0515 wrist camera。正式判据固定为 `dot(-R[:,0], world +Z)>0`；轴颜色仍为 X 红、Y 绿、Z 蓝。
+- Curobo link6 和 SAPIEN link6 的 `Ry(-90°)` 是独立于 camera-up 的固定 frame adapter，候选 IK 必须同时显式应用 Piper global-axis 和该 link adapter。
+- 正式定性 replay 使用 stage endpoint IK + 关节空间插值，不再用最大旋转放宽到约 180° 的逐 Cartesian waypoint IK。
+- 选中姿态必须经过 mount-up、IK 与实际关节限位三项检查。Raw top-1 若落在硬限位，可选择同一策略排序中下一项 feasible candidate，但必须在标题、config 和 manifest 中明确标为 constrained/feasible。
+- V5 写入独立输出；V4、OursV2 和旧策略结果不覆盖。关闭物体碰撞的 V5 只能表述为 qualitative retargeting，不作为物理抓取成功率。

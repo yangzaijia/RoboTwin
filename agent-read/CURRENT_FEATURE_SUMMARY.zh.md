@@ -7,12 +7,12 @@
 
 ## 本轮新增
 
-- Canonical `robot_replay` 候选新增显式 camera-up 等价姿态约束：蓝色 local `+Z` 保持为前进轴，绿色 local `+Y` 为开合轴，红色 local `+X = +Y x +Z` 为开合--前进平面法线；在 `R` 与 `R @ diag(-1,-1,+1)` 中选择红轴朝 world `+Z` 的分支。
-- `--candidate_camera_forward_axis local_z --candidate_camera_top_axis x` 仅在显式启用时作用；旧默认仍是 `local_x/top=z`，历史 wrapper 行为和 OursV2 均不改变。
-- `pick_diverse_bottles/id0` 的 V4 2x2 视频位于 `paper_qualitative_assets/.../id0/v4_camera_up_candidate_videos/candidate_retarget_grid_2x2_camera_up_v4.mp4`。Orientation/Fused 左手两关键帧翻转、右手不翻；Top-score 只翻左手 frame 38；每次翻转的 local `+Z` 变化均为 0°。
-- V4 只修正冗余 wrist-roll 分支，不保证单-seed Cartesian IK 稳定。Orientation 完成整段但保留左臂 miss；Top-score 因右臂 grasp miss `35.7 mm` 安全停止并冻结末帧；三次重规划重试更差，未进入成品。
-- `pick_diverse_bottles/id0` 的 approach-axis Orientation、Fused 与 canonical Top-score 候选已复用到隔离 planner 输出；wrapper 新增 `--reuse_preview_candidate_group=orientation|fused`，默认仍为 `orientation`。
-- 新论文素材包含 2×2 策略执行视频和 4×5 完整链路视频，标题栏独立于画面。Orientation/Fused 执行成功；Top-score 左臂 action miss `53.6 mm`，在标题与 manifest 中如实标记。历史 Stage-2 repaint 未与新候选错配。
+- V4 把红色 local `+X` 错认成 0515 腕部相机上侧；0515 标定实际把相机装在 link6 的 local `-X` 一侧。Canonical 轴仍是蓝 `+Z` approach、绿 `+Y` 开合、红 `+X=+Y×+Z`，但 mount-up 判据必须是 `dot(-R[:,0], world +Z)>0`。因此红轴朝下通常正是相机侧朝上。
+- V5 新增 `--candidate_camera_top_axis_sign=-1`，同时启用 Piper global-axis 和 Curobo→SAPIEN link6 的固定 local `Ry(-90°)` 适配；旧默认均保持 0/+1，不修改历史 planner、V1–V4 或 OursV2。
+- V4 的 6–10 秒 wrist roll 来自逐点 Cartesian IK、单 seed、最大约 180° 旋转放宽和缺失 link6 适配的组合，不是物体坐标变化。V5 改为 stage endpoint IK + 40 点关节插值 + 64 seeds，并新增可选 `joint_continuity` 多解选择。
+- `pick_diverse_bottles/id0` 的正式 V5 2×2 位于 `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/candidate_retarget_grid_2x2_camera_mount_up_v5.mp4`。Orientation/Fused 使用 K1 `L16/R9`、K2 `L19/R16`；Top-score-feasible 使用 K1 `L1/R3`、K2 `L3/R1`；OursV2 原视频不变。
+- Raw Top-score K2-left `#0` 会把 J5 推到 `+1.2217 rad` 上限并产生 `57 mm` action miss；改用同一分数排序中下一项满足 mount-up/IK/关节限位的 `#3` 后，左/右 action 为 `3.0/7.7 mm`，全部 stage reached。
+- 两条 V5 replay 的实际 `-X·up` 在所有记录帧均为正（候选阶段范围约 `+0.695～+0.995`），`execution_failed=false`。最终四宫格为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，标题栏独立于画面；物体碰撞关闭，因此定位为定性 retargeting 可视化而不是物理抓取成功率。
 - planner target、current readback、reach check 和可视化统一为 `T_W_RTCP`。
 - SAPIEN `L6_SIM` 与 CuRobo/server `L6_URDF` 原点一致、局部轴固定差精确 `Ry(+pi/2)`；适配后同-q FK 误差小于 `7.5e-8 m / 0.000016 deg`。
 - 服务器工具保持字面量 `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`。preview 的 `CGRASP -> RTCP` remap 是另一层独立变换。
@@ -33,6 +33,7 @@
 4. `PIPER_CANONICAL_TCP_V1.zh.md`
 5. `COMMANDS/piper_canonical_tcp_v1.zh.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.zh.md`
+7. `COMMANDS/candidate_camera_mount_up_v5.zh.md`
 
 ## 2026-07-16 补充
 

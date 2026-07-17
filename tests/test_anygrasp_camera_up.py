@@ -72,6 +72,29 @@ def test_canonical_upward_plane_normal_is_left_unchanged() -> None:
     assert debug["forward_axis_change_deg"] == 0.0
 
 
+def test_canonical_negative_x_plane_normal_uses_opposite_equivalent_branch() -> None:
+    rotation = np.array(
+        [
+            [0.0, 0.0, 1.0],
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
+    chosen, debug = planner.constrain_roll_keep_top_axis_up(
+        rotation,
+        top_axis="x",
+        top_axis_sign=-1,
+        forward_axis="local_z",
+    )
+
+    assert debug["original_top_axis_up_dot"] == -1.0
+    assert debug["camera_up_flip_applied"] == 1
+    assert debug["forward_axis_change_deg"] == 0.0
+    assert planner.top_axis_up_dot(chosen, "x", -1) == 1.0
+    np.testing.assert_allclose(chosen[:, 2], rotation[:, 2], atol=1e-12)
+
+
 def test_first_keyframe_postprocess_preserves_raw_flip_provenance() -> None:
     rotation = np.array(
         [
@@ -112,6 +135,7 @@ def test_first_keyframe_postprocess_preserves_raw_flip_provenance() -> None:
         candidate_keep_camera_up=1,
         candidate_camera_forward_axis="local_z",
         candidate_camera_top_axis="x",
+        candidate_camera_top_axis_sign=1,
         candidate_target_local_x_offset_m=0.0,
         candidate_target_local_z_offset_m=0.0,
     )
@@ -129,5 +153,6 @@ if __name__ == "__main__":
     test_legacy_local_x_forward_behavior_is_preserved()
     test_canonical_local_z_forward_flips_plane_normal_only()
     test_canonical_upward_plane_normal_is_left_unchanged()
+    test_canonical_negative_x_plane_normal_uses_opposite_equivalent_branch()
     test_first_keyframe_postprocess_preserves_raw_flip_provenance()
-    print("camera-up regression tests: 4 passed")
+    print("camera-up regression tests: 5 passed")

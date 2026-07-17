@@ -271,7 +271,9 @@ board/board_third_frame0000.png
 index.csv
 ```
 
-## 2026-07-17：Canonical local-Z 前进轴的 camera-up 规则
+## 2026-07-17：Canonical local-Z 前进轴的 camera-up 规则（V4，0515 安装判据已被 V5 修正）
+
+> 注意：下面的 `local +X` 朝上结论只记录 V4 历史。0515 标定显示腕部相机主要位于 link6 的 local `-X` 一侧；正式 V5 必须使用本节末尾的 `-X` mount-up 规则。
 
 `robot_replay` canonical candidate 的局部轴定义为：
 
@@ -300,3 +302,23 @@ R_flip = R @ diag(-1, -1, +1)
 不要在 canonical local-Z candidate 上复用旧的 `diag(+1,-1,-1)`：旧矩阵是绕 local `+X` 翻转，适用于历史 local-X-forward 约定，但会反转 canonical local `+Z` 前进轴。代码因此新增显式 `--candidate_camera_forward_axis=local_x|local_z`；默认 `local_x` 保持旧行为。
 
 这条规则只消除平行夹爪的离散 wrist-roll 二义性，不改变候选编号、接近方向或目标位置，也不替代 IK 可达性/碰撞检查。OursV2 human-target replay 不经过该 AnyGrasp candidate 后处理。
+
+## 2026-07-17：V5 校准相机安装侧与 link6 适配
+
+0515 wrist 外参的 link6 局部平移为左 `[-0.0743,+0.0207,+0.0936] m`、右 `[-0.0600,-0.0274,+0.0894] m`，相机主体位于 local `-X` 一侧。因此正确的 mount-up 判据是：
+
+```text
+camera_mount_normal = -R[:, 0]
+dot(camera_mount_normal, world_up) > 0
+```
+
+调试轴颜色不变：红/绿/蓝仍表示 local `+X/+Y/+Z`。相机侧朝上时，红色 `+X` 朝下是预期现象，不能再据此判断相机倒置。
+
+候选目标进入 Piper IK 前还必须应用两层独立适配：
+
+```text
+Piper replay global axis conversion
+R_sapien_link6 = R_curobo_link6 @ Ry(-90 deg)
+```
+
+V5 使用 `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1`、`--piper_apply_global_trans_to_ik 1` 和 `--piper_apply_curobo_to_sapien_link_rotation 1`。为避免 V4 逐 waypoint IK 的 wrist branch 跳变，正式路径使用 stage endpoint IK、40 点关节插值和 64 seeds；Top-score-feasible 额外使用 `joint_continuity`，已成功的 Orientation/Fused 保留 `pose_error`。camera-up 仍不等于可执行：候选若把关节推到硬限位，必须使用同一策略排序中下一项满足 mount-up、IK 和关节限位的候选，并在标题/manifest 中标为 constrained/feasible。

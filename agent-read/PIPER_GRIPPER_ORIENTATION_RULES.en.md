@@ -236,7 +236,9 @@ Recommended sequence:
 3. Run longer sequences or right-hand checks only for visually plausible candidates.
 4. If a candidate looks right but succeeds rarely, tune `TARGET_DY/TARGET_DZ` and the IK initial state before continuing to scan more rotations.
 
-## 2026-07-17: camera-up rule for canonical local-Z approach
+## 2026-07-17: camera-up rule for canonical local-Z approach (V4; 0515 mount criterion corrected by V5)
+
+> Note: the local-`+X`-up conclusion below is retained only as V4 history. The 0515 calibration places the wrist camera primarily on the link6 local `-X` side; formal V5 outputs use the `-X` mount-up rule at the end of this section.
 
 Canonical `robot_replay` candidate axes are:
 
@@ -265,3 +267,23 @@ R_flip = R @ diag(-1, -1, +1)
 Do not reuse legacy `diag(+1,-1,-1)` for canonical local-Z candidates. That matrix rolls about local `+X`; it is correct for the historical local-X-forward contract but reverses canonical local `+Z`. The implementation therefore adds explicit `--candidate_camera_forward_axis=local_x|local_z`, retaining `local_x` as the backward-compatible default.
 
 This rule only resolves the parallel-jaw wrist-roll ambiguity. It does not change candidate identity, approach direction, or target position, and it does not replace IK reachability or collision checks. OursV2 human-target replay does not use this AnyGrasp-candidate post-processing.
+
+## 2026-07-17: V5 calibrated camera mount side and link6 adapter
+
+The 0515 wrist extrinsic translations in link6 local coordinates are left `[-0.0743,+0.0207,+0.0936] m` and right `[-0.0600,-0.0274,+0.0894] m`, placing the camera body primarily on local `-X`. The correct mount-up criterion is:
+
+```text
+camera_mount_normal = -R[:, 0]
+dot(camera_mount_normal, world_up) > 0
+```
+
+Debug colors remain red/green/blue for local `+X/+Y/+Z`. A downward red `+X` arrow is expected when the camera side is upward and must not be interpreted as an upside-down camera.
+
+Candidate targets also require two independent Piper adapters before IK:
+
+```text
+Piper replay global axis conversion
+R_sapien_link6 = R_curobo_link6 @ Ry(-90 deg)
+```
+
+V5 uses `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1`, `--piper_apply_global_trans_to_ik 1`, and `--piper_apply_curobo_to_sapien_link_rotation 1`. To remove V4 Cartesian-waypoint wrist-branch jumps, formal routes use stage-endpoint IK, 40-waypoint joint interpolation, and 64 seeds. The constrained Top-score run additionally uses `joint_continuity`, while the successful Orientation/Fused run retains `pose_error`. Camera-up does not imply executability: a candidate at a hard joint limit must be replaced by the next candidate in the same strategy ranking that satisfies mount-up, IK, and joint-limit feasibility, and the output must be labeled constrained/feasible.

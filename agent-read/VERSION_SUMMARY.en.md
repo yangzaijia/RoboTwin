@@ -89,3 +89,7 @@ No method or IK version changes. The Dense-v2 paper grid moves titles out of vid
 ### 2026-07-17: Canonical candidate camera-up v1.x increment
 
 This does not promote a major version or modify OursV2/V3 outputs. The AnyGrasp planner gains explicit camera-forward/top axes. Canonical local-Z-forward mode chooses the local-X-up branch between parallel-jaw-equivalent poses with `R @ diag(-1,-1,+1)`, while legacy local-X-forward defaults remain unchanged. An isolated `pick_diverse_bottles/id0` V4 2x2 diagnostic records execution failures and final-frame freezing explicitly in config/manifest.
+
+### 2026-07-17: calibrated camera-mount-up V5 (v1.x correction)
+
+The 0515 camera extrinsics invalidate V4's local-X-up criterion; formal mount-up is now link6 local `-X` toward world `+Z`. This backward-compatible correction adds top-axis sign, the Curobo-to-SAPIEN link6 adapter, reuse-preview manual-candidate handling, correct 40-waypoint propagation, a joint-continuity wrapper option, and per-joint settle-miss diagnostics. Orientation/Fused and constrained Top-score complete `pick_diverse_bottles/id0` in isolated `v5_camera_mount_up_candidate_videos`; OursV2 and V4 remain unchanged. Object collisions are disabled, so V5 is qualitative retargeting validation only.

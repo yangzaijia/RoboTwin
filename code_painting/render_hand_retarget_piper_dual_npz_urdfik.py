@@ -29,6 +29,12 @@ from urdfik import URDFInverseKinematics
 PIPER_URDF = PROJECT_ROOT / "assets" / "embodiments" / "piper_pika_agx" / "piper_pika_agx.urdf"
 DEFAULT_INIT_ARM_JOINTS = np.array([0.0, 0.8, 1.2, 0.0, -0.4, 0.0], dtype=np.float64)
 DEFAULT_INIT_GRIPPER_OPEN = 1.0
+# For identical joint values, the SAPIEN link6 axes equal the Curobo FK
+# link6 axes followed by local Ry(-90 deg). Link origins coincide.
+CUROBO_TO_SAPIEN_LINK_ROTATION = np.array(
+    [[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]],
+    dtype=np.float64,
+)
 
 
 class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
@@ -37,7 +43,9 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
         raw_cartesian_interp_steps = int(kwargs.pop("urdfik_cartesian_interp_steps", 8))
         self.urdfik_cartesian_interp_auto_step_m = max(float(kwargs.pop("urdfik_cartesian_interp_auto_step_m", 0.05)), 1e-4)
         self.urdfik_cartesian_interp_steps = -1 if raw_cartesian_interp_steps == -1 else max(raw_cartesian_interp_steps, 2)
-        self.urdfik_joint_interp_waypoints = max(int(kwargs.pop("urdfik_joint_interp_waypoints", 2)), 2)
+        # ReplayRenderer also owns this attribute. Keep the keyword for super()
+        # so its default does not silently overwrite the requested waypoint count.
+        self.urdfik_joint_interp_waypoints = max(int(kwargs.get("urdfik_joint_interp_waypoints", 2)), 2)
         self.urdfik_position_threshold_m = max(float(kwargs.pop("urdfik_position_threshold_m", 0.001)), 1e-6)
         self.urdfik_rotation_threshold_rad = max(float(kwargs.pop("urdfik_rotation_threshold_rad", 0.02)), 1e-6)
         max_pos_raw = kwargs.pop("urdfik_max_position_threshold_m", None)
@@ -47,6 +55,10 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
         self.urdfik_num_seeds = max(int(kwargs.pop("urdfik_num_seeds", 1)), 1)
         self.urdfik_execute_partial_cartesian_plan = bool(kwargs.pop("urdfik_execute_partial_cartesian_plan", False))
         self.urdfik_apply_global_trans_to_ik = bool(kwargs.pop("urdfik_apply_global_trans_to_ik", False))
+        self.urdfik_apply_curobo_to_sapien_link_rotation = bool(
+            kwargs.pop("urdfik_apply_curobo_to_sapien_link_rotation", False)
+        )
+        self.curobo_to_sapien_link_rotation = CUROBO_TO_SAPIEN_LINK_ROTATION.copy()
         self.urdfik_solution_selection = str(kwargs.pop("urdfik_solution_selection", "pose_error"))
         self.urdfik_seed_perturbations = max(int(kwargs.pop("urdfik_seed_perturbations", 0)), 0)
         self.urdfik_seed_perturbation_scale = max(
@@ -96,6 +108,7 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
             f"seed_perturbation_scale={self.urdfik_seed_perturbation_scale:.3f} "
             f"max_joint_step_rad={self.urdfik_max_joint_step_rad} "
             f"apply_global_trans_to_ik={int(self.urdfik_apply_global_trans_to_ik)} "
+            f"apply_curobo_to_sapien_link_rotation={int(self.urdfik_apply_curobo_to_sapien_link_rotation)} "
             f"exec_waypoint_scene_steps={self.execute_waypoint_scene_steps} "
             f"exec_settle_scene_steps={self.execute_settle_scene_steps}"
         )
@@ -114,19 +127,21 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
             raise RuntimeError("Robot is not initialized.")
         target_pose_base = self.world_pose_to_base_pose_for_arm(target_pose_world, arm)
         target_pose_ee = self.robot._trans_from_gripper_to_endlink(target_pose_base.tolist(), arm_tag=arm)
-        if not self.urdfik_apply_global_trans_to_ik:
+        if not self.urdfik_apply_global_trans_to_ik and not self.urdfik_apply_curobo_to_sapien_link_rotation:
             return np.asarray(target_pose_ee.p, dtype=np.float64), np.asarray(target_pose_ee.q, dtype=np.float64)
-        # Optional diagnostic mode only. The default path intentionally matches
-        # the direct Piper hand replay convention, which already produces the
-        # visually correct gripper orientation for stored gripper poses.
-        global_trans = np.asarray(
-            self.robot.left_global_trans_matrix if arm == "left" else self.robot.right_global_trans_matrix,
+        ee_rot_base = np.asarray(
+            R.from_quat(base.quat_wxyz_to_xyzw(target_pose_ee.q)).as_matrix(),
             dtype=np.float64,
-        ).reshape(3, 3)
-        ee_rot_base = base.orthonormalize_rotation(
-            np.asarray(R.from_quat(base.quat_wxyz_to_xyzw(target_pose_ee.q)).as_matrix(), dtype=np.float64)
-            @ np.linalg.inv(global_trans)
         )
+        if self.urdfik_apply_global_trans_to_ik:
+            global_trans = np.asarray(
+                self.robot.left_global_trans_matrix if arm == "left" else self.robot.right_global_trans_matrix,
+                dtype=np.float64,
+            ).reshape(3, 3)
+            ee_rot_base = ee_rot_base @ np.linalg.inv(global_trans)
+        if self.urdfik_apply_curobo_to_sapien_link_rotation:
+            ee_rot_base = ee_rot_base @ np.linalg.inv(CUROBO_TO_SAPIEN_LINK_ROTATION)
+        ee_rot_base = base.orthonormalize_rotation(ee_rot_base)
         ee_quat_base = base.quat_xyzw_to_wxyz(R.from_matrix(ee_rot_base).as_quat())
         return np.asarray(target_pose_ee.p, dtype=np.float64), np.asarray(ee_quat_base, dtype=np.float64)
 

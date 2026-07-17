@@ -61,3 +61,11 @@
 - Camera-up chooses only between the parallel-jaw-equivalent `R` and `R @ diag(-1,-1,+1)`, requiring nonnegative local-`+X` dot world-`+Z`. The legacy local-X-forward `diag(+1,-1,-1)` must not be reused.
 - The new axis arguments are explicit. Defaults remain `local_x/top=z`, preserving historical planners, OursV2, and candidate ranking.
 - Camera-up resolves a discrete roll ambiguity; it does not reinterpret an IK miss as a frame failure. Paper videos retain failure labels and V4 outputs remain isolated from V3.
+
+## 2026-07-17: formal V5 mount-up uses the calibrated 0515 camera-side `-X`
+
+- The preceding local-`+X`-up rule is retained only as V4 history and must not be used for the 0515 wrist camera. Formal mount-up is `dot(-R[:,0], world +Z)>0`; axis colors remain X red, Y green, Z blue.
+- The Curobo-link6 to SAPIEN-link6 local `Ry(-90 deg)` is a frame adapter independent of camera-up. Candidate IK must explicitly apply both the Piper global-axis conversion and this link adapter.
+- Formal qualitative replays use stage-endpoint IK plus joint-space interpolation, not Cartesian waypoint IK with an approximately 180-degree relaxed rotation threshold.
+- A selected pose must pass mount-up, IK, and physical joint-limit checks. If raw top-1 lies on a hard limit, the next feasible candidate in the same strategy ranking may be used only when the title, config, and manifest label the result constrained/feasible.
+- V5 writes to an isolated output and never overwrites V4, OursV2, or legacy strategy results. With object collisions disabled, V5 is qualitative retargeting evidence, not a physical grasp-success benchmark.

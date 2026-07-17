@@ -23,3 +23,5 @@ python some_script.py --some-flag
 - 按任务/主题分组整理。
 
 论文定性视频网格和关键帧候选图命令见 `paper_qualitative_assets.zh.md`。
+
+0515 标定相机安装侧、Curobo/SAPIEN link6 适配与 V5 候选 replay 命令见 `candidate_camera_mount_up_v5.zh.md`。

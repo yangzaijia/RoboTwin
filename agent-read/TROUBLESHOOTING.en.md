@@ -117,3 +117,18 @@
 - Cause: legacy `--candidate_keep_camera_up` assumed local-X-forward and used `diag(+1,-1,-1)`. Canonical `robot_replay` uses local `+Z` as forward, so the legacy flip cannot be reused safely.
 - Check `candidate_camera_forward_axis`, `candidate_camera_top_axis`, `top_axis_up_dot`, `camera_up_flip_applied`, and `forward_axis_change_deg` in `plan_summary.json`. Canonical output should report `local_z`, `x`, nonnegative up dot, and about zero-degree forward change when flipped.
 - Fix: explicitly pass `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`. This only selects between two equivalent parallel-jaw roll branches; it does not guarantee IK success. Do not hide IK branch divergence by blindly increasing replan attempts.
+
+## V4 camera remains upside down and the wrist rolls around 6--10 seconds
+
+- Symptom: Orientation/Fused/Top-score end with the camera side down and the axes roll mid-sequence. Red points upward while the calibrated camera body is on the lower side.
+- Cause 1: V4 treated red local `+X` as the camera top. The 0515 extrinsics place the camera body on link6 local `-X`, so the sign was reversed.
+- Cause 2: V4 omitted `R_sapien_link6 = R_curobo_link6 @ Ry(-90 deg)`, leaving a fixed rotation between planned axes and the rendered SAPIEN link6.
+- Cause 3: one-seed Cartesian waypoint IK with an approximately 180-degree maximum relaxed rotation error can switch wrist branches mid-trajectory.
+- Fix: use `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1 --piper_apply_global_trans_to_ik 1 --piper_apply_curobo_to_sapien_link_rotation 1 --trajectory_mode joint_interp --joint_interp_waypoints 40 --ik_num_seeds 64 --ik_solution_selection joint_continuity`.
+- Validation: compute `-R_world[2,0]` for every `pose_debug.jsonl` record and require it to stay positive through candidate stages. Do not use upward red `+X` as the camera-up test.
+
+## Camera-up FK is correct but physical execution has a fixed miss
+
+- Inspect per-joint target/current/delta in `[joint-settle-miss]`. A target exactly equal to a URDF upper/lower bound means the candidate lies on a joint limit; the frame convention is not necessarily wrong.
+- For `pick_diverse_bottles/id0`, raw K2-left Top-score `#0` sets J5 to its `+1.2217 rad` upper limit and misses action by about `57 mm`. The next mount-up/IK/joint-limit-feasible candidate `#3` in the same ranking reduces the miss to `3.0 mm`.
+- Do not hide this failure by relaxing reach tolerance. Any replacement must be labeled constrained/feasible in the output.

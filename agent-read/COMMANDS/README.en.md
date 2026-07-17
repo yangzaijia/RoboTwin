@@ -23,3 +23,5 @@ python some_script.py --some-flag
 - Group commands by task/topic.
 
 See `paper_qualitative_assets.en.md` for the paper video-grid and keyframe-candidate commands.
+
+See `candidate_camera_mount_up_v5.en.md` for the calibrated 0515 camera-side rule, Curobo/SAPIEN link6 adapter, and V5 candidate-replay commands.

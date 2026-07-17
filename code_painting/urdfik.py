@@ -118,9 +118,11 @@ class URDFInverseKinematics:
                 and float(self.ik_solver.rotation_threshold) >= max_rot_thresh
             ):
                 pos_err = float(result.position_error.cpu().numpy()[0, 0])
+                rot_err = float(result.rotation_error.cpu().numpy()[0, 0])
                 print(
                     "[IK] Failed to converge "
                     f"(ee_link={self.ee_link}, pos_err={pos_err:.4f}m, "
+                    f"rot_err={rot_err:.4f}rad, "
                     f"pos_thresh={float(self.ik_solver.position_threshold):.4f}m, "
                     f"rot_thresh={float(self.ik_solver.rotation_threshold):.4f}rad)"
                 )

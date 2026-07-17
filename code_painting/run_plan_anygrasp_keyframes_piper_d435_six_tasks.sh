@@ -26,19 +26,24 @@ SETTLE_STEPS=30
 JOINT_TARGET_WAIT_STEPS=25
 PRINT_POSE_EVERY=0
 REACH_ERROR_POSE_SOURCE=ee
+REACH_ROT_TOL_DEG=180
 VISUALIZE_TARGETS=0
 TARGET_AXES_ONLY=0
 PURE_SCENE_OUTPUT=1
 EXECUTE_PARTIAL_CARTESIAN_PLAN=0
 IK_MAX_POSITION_THRESHOLD_M=0.02
 IK_MAX_ROTATION_THRESHOLD_RAD=0.12
+IK_NUM_SEEDS=1
+IK_SOLUTION_SELECTION=pose_error
 PIPER_APPLY_GLOBAL_TRANS_TO_IK=0
+PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION=0
 CANDIDATE_ORIENTATION_REMAP_LABEL=identity
 CANDIDATE_SELECTION_MODE=planner
 CANDIDATE_MAX_ROTATION_DISTANCE_DEG=-1.0
 CANDIDATE_KEEP_CAMERA_UP=0
 CANDIDATE_CAMERA_FORWARD_AXIS=local_x
 CANDIDATE_CAMERA_TOP_AXIS=z
+CANDIDATE_CAMERA_TOP_AXIS_SIGN=1
 ENFORCE_CANDIDATE_DISTANCE_CONSTRAINT=1
 CANDIDATE_TARGET_LOCAL_X_OFFSET_M=-0.05
 CANDIDATE_TARGET_LOCAL_Z_OFFSET_M=0.0
@@ -61,6 +66,7 @@ WRIST_LEFT_YAW_DEG=0.0
 WRIST_RIGHT_YAW_DEG=0.0
 WRIST_LEFT_PITCH_DEG=0.0
 WRIST_RIGHT_PITCH_DEG=0.0
+MANUAL_CANDIDATE_ARGS=()
 IDS_FILTER=()
 ID_START=""
 ID_END=""
@@ -156,6 +162,10 @@ while (($# > 0)); do
       REACH_ERROR_POSE_SOURCE="$2"
       shift 2
       ;;
+    --reach_rot_tol_deg)
+      REACH_ROT_TOL_DEG="$2"
+      shift 2
+      ;;
     --visualize_targets)
       VISUALIZE_TARGETS=1
       PURE_SCENE_OUTPUT=0
@@ -203,8 +213,24 @@ while (($# > 0)); do
       IK_MAX_ROTATION_THRESHOLD_RAD="$2"
       shift 2
       ;;
+    --ik_num_seeds)
+      IK_NUM_SEEDS="$2"
+      shift 2
+      ;;
+    --ik_solution_selection)
+      IK_SOLUTION_SELECTION="$2"
+      if [[ "$IK_SOLUTION_SELECTION" != "pose_error" && "$IK_SOLUTION_SELECTION" != "joint_continuity" ]]; then
+        echo "ERROR: --ik_solution_selection must be pose_error or joint_continuity" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
     --piper_apply_global_trans_to_ik)
       PIPER_APPLY_GLOBAL_TRANS_TO_IK="$2"
+      shift 2
+      ;;
+    --piper_apply_curobo_to_sapien_link_rotation)
+      PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION="$2"
       shift 2
       ;;
     --candidate_orientation_remap_label)
@@ -231,6 +257,10 @@ while (($# > 0)); do
       CANDIDATE_CAMERA_TOP_AXIS="$2"
       shift 2
       ;;
+    --candidate_camera_top_axis_sign)
+      CANDIDATE_CAMERA_TOP_AXIS_SIGN="$2"
+      shift 2
+      ;;
     --enforce_candidate_distance_constraint)
       ENFORCE_CANDIDATE_DISTANCE_CONSTRAINT="$2"
       shift 2
@@ -242,6 +272,10 @@ while (($# > 0)); do
     --candidate_target_local_z_offset_m)
       CANDIDATE_TARGET_LOCAL_Z_OFFSET_M="$2"
       shift 2
+      ;;
+    --manual_candidate)
+      MANUAL_CANDIDATE_ARGS+=(--manual_candidate "$2" "$3" "$4")
+      shift 4
       ;;
     --approach_axis)
       APPROACH_AXIS="$2"
@@ -428,7 +462,7 @@ for TASK in "${TASKS[@]}"; do
     done
     IDS=("${FILTERED_IDS[@]}")
   fi
-  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} keep_camera_up=${CANDIDATE_KEEP_CAMERA_UP} camera_forward=${CANDIDATE_CAMERA_FORWARD_AXIS} camera_top=${CANDIDATE_CAMERA_TOP_AXIS} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
+  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} reach_rot_tol_deg=${REACH_ROT_TOL_DEG} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} ik_num_seeds=${IK_NUM_SEEDS} ik_solution_selection=${IK_SOLUTION_SELECTION} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} piper_curobo_sapien_link_rot=${PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} manual_candidates=$((${#MANUAL_CANDIDATE_ARGS[@]} / 4)) remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} keep_camera_up=${CANDIDATE_KEEP_CAMERA_UP} camera_forward=${CANDIDATE_CAMERA_FORWARD_AXIS} camera_top=${CANDIDATE_CAMERA_TOP_AXIS} camera_top_sign=${CANDIDATE_CAMERA_TOP_AXIS_SIGN} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
   for ID in "${IDS[@]}"; do
     ANY=${ANY_ROOT}/foundation_input_${ID}
     REPLAY=/home/zaijia001/ssd/data/piper/hand/${TASK}/foundation_replay_d435/foundation_input_${ID}
@@ -484,18 +518,23 @@ for TASK in "${TASKS[@]}"; do
       --execute_partial_cartesian_plan ${EXECUTE_PARTIAL_CARTESIAN_PLAN} \
       --urdfik_max_position_threshold_m ${IK_MAX_POSITION_THRESHOLD_M} \
       --urdfik_max_rotation_threshold_rad ${IK_MAX_ROTATION_THRESHOLD_RAD} \
+      --urdfik_num_seeds ${IK_NUM_SEEDS} \
+      --urdfik_solution_selection ${IK_SOLUTION_SELECTION} \
       --piper_urdfik_apply_global_trans_to_ik ${PIPER_APPLY_GLOBAL_TRANS_TO_IK} \
+      --piper_urdfik_apply_curobo_to_sapien_link_rotation ${PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION} \
       --candidate_selection_mode ${CANDIDATE_SELECTION_MODE} \
       --candidate_max_rotation_distance_deg ${CANDIDATE_MAX_ROTATION_DISTANCE_DEG} \
       --candidate_keep_camera_up ${CANDIDATE_KEEP_CAMERA_UP} \
       --candidate_camera_forward_axis "${CANDIDATE_CAMERA_FORWARD_AXIS}" \
       --candidate_camera_top_axis "${CANDIDATE_CAMERA_TOP_AXIS}" \
+      --candidate_camera_top_axis_sign ${CANDIDATE_CAMERA_TOP_AXIS_SIGN} \
       --enforce_candidate_distance_constraint ${ENFORCE_CANDIDATE_DISTANCE_CONSTRAINT} \
       --candidate_orientation_remap_label ${CANDIDATE_ORIENTATION_REMAP_LABEL} \
       --left_target_object "$LEFT_OBJ" \
       --right_target_object "$RIGHT_OBJ" \
       --candidate_target_local_x_offset_m ${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} \
       --candidate_target_local_z_offset_m ${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} \
+      "${MANUAL_CANDIDATE_ARGS[@]}" \
       --approach_axis ${APPROACH_AXIS} \
       --approach_offset_m ${APPROACH_OFFSET_M} \
       --reach_error_pose_source ${REACH_ERROR_POSE_SOURCE} \
@@ -511,7 +550,7 @@ for TASK in "${TASKS[@]}"; do
       --debug_visualize_ik_waypoints ${DEBUG_VISUALIZE_IK_WAYPOINTS} \
       --debug_gripper_actor_forward_axis ${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} \
       --reach_pos_tol_m 0.03 \
-      --reach_rot_tol_deg 180 \
+      --reach_rot_tol_deg ${REACH_ROT_TOL_DEG} \
       --enable_grasp_action_object_collision ${ENABLE_EXECUTION_COLLISIONS} \
       --grasp_action_object_collision_start_stage pregrasp \
       --execution_object_collision_mode convex \
