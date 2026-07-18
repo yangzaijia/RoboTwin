@@ -7,11 +7,11 @@
 
 ## 本轮新增
 
-- V5 轴结论已撤销：它把相机安装平移 `-X` 错当成相机姿态，并把蓝 `+Z` 错当成 Piper AnyGrasp 前进轴。视频和候选几何确认正确轴为红 `+X` 前进、绿 `+Y` 开合、蓝 `+Z` 平面法向；camera-back-up 约束保持红轴不变并要求 `-R[:,2]·world_up >= 0`。
-- `candidate_keep_camera_up` 的后续关键帧旧逻辑把 camera-up 只作为连续性同分项，可能为了较小旋转重新选回倒置分支。V6 先硬过滤 camera-up 分支，再最小化与上一关键帧的旋转差；新增回归测试覆盖该 180° 冲突。
-- V6 使用 local-X 的 `-0.05 m` candidate offset 与 `0.12 m` pregrasp，stage endpoint IK、40 点关节插值、64 seeds 和 `joint_continuity`。`pick_diverse_bottles/id0` 的可达候选为 K1 `L16/R18`、K2 `L6/R5`；Orientation、Fused 和 constrained Top-score 在全部约束后收敛到同一组 ID，OursV2 不变。
-- K1 grasp 实际误差为左 `3.1 mm/0.17°`、右 `2.5 mm/0.14°`；K2 action 为左 `3.1 mm/21.28°`、右 `6.6 mm/4.52°`，全部 stage reached。物体碰撞关闭，因此仍是定性 retargeting 可视化，不是物理抓取成功率。
-- 正式 V6 视频位于 `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/candidate_retarget_grid_2x2_red_forward_camera_back_up_v6.mp4`；对应候选总图为同目录 `selected_candidates/selected_anygrasp_candidates_v6_contact_sheet.png`。视频为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，标题栏与画面分离。
+- V6 候选几何审计推翻了“V6 已统一 AnyGrasp 轴语义”的结论。输入候选仍为 `candidate_frame_mode=robot_replay`：canonical 蓝 `+Z = raw AnyGrasp +X approach`；V6 却把同一旋转按红 `+X = forward` 使用。选中候选的 V6 stored rotation 与 `anygrasp_raw` 固定相差 `90°`。
+- V6 的 `-0.05 m` candidate offset 沿 stored red `+X`，而不是沿 raw AnyGrasp approach。`pick_diverse_bottles/id0/frame78/right #5` 从 raw center 到 object anchor 的 `4.68 cm` 增为 current target 的 `9.62 cm`。因此 V6 视频只能证明该错误目标可被 IK/关节执行，不能证明候选坐标链正确。
+- 新增只读导出器 `code_painting/export_v6_candidate_geometry_audit.py`。它为 frame 38/78 各生成 2×3 图：raw dense candidates、选中 raw poses、V6 stored remap、当前 `-5 cm` target、object-anchor 距离和 raw-vs-target overlay；不调用 IK、不覆盖旧素材。
+- 审计输出位于 `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/candidate_audit_v6/`。两张 contact sheet 均为 1920×1152；frame 38 使用 `L16/R18`，frame 78 使用 `L6/R5`。
+- `candidate_keep_camera_up` 的“每个关键帧先硬过滤 camera-up，再优化连续性”修复本身仍有效，但它应用在哪个局部轴上必须等候后续统一 `anygrasp_raw` 与 `robot_replay` 语义。OursV2 未修改。
 - planner target、current readback、reach check 和可视化统一为 `T_W_RTCP`。
 - SAPIEN `L6_SIM` 与 CuRobo/server `L6_URDF` 原点一致、局部轴固定差精确 `Ry(+pi/2)`；适配后同-q FK 误差小于 `7.5e-8 m / 0.000016 deg`。
 - 服务器工具保持字面量 `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`。preview 的 `CGRASP -> RTCP` remap 是另一层独立变换。
@@ -32,7 +32,8 @@
 4. `PIPER_CANONICAL_TCP_V1.zh.md`
 5. `COMMANDS/piper_canonical_tcp_v1.zh.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.zh.md`
-7. `COMMANDS/candidate_camera_mount_up_v6.zh.md`
+7. `COMMANDS/piper_v6_candidate_geometry_audit.zh.md`
+8. `COMMANDS/candidate_camera_mount_up_v6.zh.md`（历史 V6 复现，当前有已知轴混用）
 
 ## 2026-07-16 补充
 

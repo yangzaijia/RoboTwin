@@ -1,5 +1,7 @@
 # Piper AnyGrasp red-forward camera-back-up V6 commands
 
+> **Known axis-semantic mix; historical reproduction only.** V6 inputs remain `robot_replay` rotations (blue `+Z = raw AnyGrasp +X approach`), while the planner arguments treat red `+X` as forward and apply `-0.05 m` along red X. The 2026-07-18 candidate audit proves a fixed `90 deg` difference between stored rotations and `anygrasp_raw`. Do not use this page as evidence that the candidate-coordinate chain is correct; run the audit documented in `piper_v6_candidate_geometry_audit.en.md` first.
+
 ## Current axis contract
 
 - Red `+X`: gripper forward/approach.
@@ -85,4 +87,4 @@ ffprobe -v error -select_streams v:0 \
   /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v6_red_forward_camera_back_up_candidate_videos/candidate_retarget_grid_2x2_red_forward_camera_back_up_v6.mp4
 ```
 
-Object collisions are disabled. This video validates candidate frames, camera-side orientation, and retargeting; it is not a physical grasp-success benchmark.
+Object collisions are disabled. The video only proves that the current targets can be reached by IK/joint execution. Because it mixes `robot_replay` with `local_x forward`, it is no longer evidence that candidate coordinates or camera-side orientation are correct, and it is not a physical grasp-success benchmark.

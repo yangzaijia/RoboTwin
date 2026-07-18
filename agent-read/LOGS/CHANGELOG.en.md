@@ -3379,3 +3379,11 @@ Validation: `py_compile`, `bash -n`, wrapper dry-run, and direct execution of al
 - The new 2x2 lives under `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/` with MP4, config, manifest, and bilingual notes. The 15.2-second candidate replays use `15.2/21.4` speed to match OursV2, and headers remain outside video content.
 
 Validation: local/remote `py_compile`, `bash -n`, invalid solution-selection enumeration, wrapper dry run, and all five `tests/test_anygrasp_camera_up.py` regressions pass. Actual `-X dot up` is positive in every formal replay frame (about `+0.695..+0.995` during candidate stages). All sources and the deliverable pass ffprobe; the final grid is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds, with visual QA at 6/8/10 seconds and the final frame. Object collisions are disabled, so this is qualitative retargeting visualization rather than physical grasp-success evidence.
+
+## 2026-07-18 (V6 AnyGrasp candidate-geometry audit)
+
+- Added read-only `export_v6_candidate_geometry_audit.py`, following the earlier six-panel contact-sheet visual style for frames 38/78 of `pick_diverse_bottles/id0`: raw dense, selected raw, stored remap, current target, anchor distance, and overlay. It invokes no IK and overwrites no historical result.
+- Matrix verification proves a fixed `90 deg` difference between V6 stored rotations and `anygrasp_raw`: candidates still come from `robot_replay` (blue `+Z` is raw approach), but V6 treats red `+X` as forward and applies `-0.05 m` along it. This is a mixed coordinate contract.
+- Frame-78 right `#5` grows from `4.68 cm` raw-center distance to the object anchor to `9.62 cm` for the current target. Successful V6 execution therefore does not prove the candidate-coordinate chain. Neither V6/OursV2 video nor planner logic was modified in this change.
+
+Validation: `py_compile`, dry-run, both 20-candidate frame inputs, manifest JSON, dimensions/hashes of both 1920x1152 contact sheets, and original-resolution visual QA passed. Output is under `paper_qualitative_assets/.../candidate_audit_v6/`.

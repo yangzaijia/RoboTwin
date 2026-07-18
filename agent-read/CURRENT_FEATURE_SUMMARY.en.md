@@ -7,11 +7,11 @@
 
 ## Added in this change
 
-- The V5 axis conclusion is withdrawn. It inferred camera orientation from the `-X` mount translation and treated blue `+Z` as Piper AnyGrasp forward. Video and candidate geometry show the correct contract is red `+X` forward, green `+Y` jaw opening, and blue `+Z` plane normal; camera-back-up preserves red and requires `-R[:,2] dot world_up >= 0`.
-- The old later-keyframe logic treated camera-up only as a continuity tie-breaker, so it could select the inverted branch to reduce rotation. V6 first hard-filters for camera-up, then minimizes rotation from the previous keyframe. A regression test covers this 180-degree conflict.
-- V6 uses the local-X `-0.05 m` candidate offset and `0.12 m` pregrasp, stage-endpoint IK, 40-point joint interpolation, 64 seeds, and `joint_continuity`. Feasible IDs for `pick_diverse_bottles/id0` are K1 `L16/R18` and K2 `L6/R5`; Orientation, Fused, and constrained Top-score converge to the same IDs after all constraints. OursV2 is unchanged.
-- Actual K1 grasp errors are left `3.1 mm/0.17 deg` and right `2.5 mm/0.14 deg`; K2 action errors are left `3.1 mm/21.28 deg` and right `6.6 mm/4.52 deg`, with every stage reached. Object collisions remain disabled, so this is qualitative retargeting visualization rather than physical grasp-success evaluation.
-- The formal V6 video is `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/candidate_retarget_grid_2x2_red_forward_camera_back_up_v6.mp4`; the matched candidate sheet is `selected_candidates/selected_anygrasp_candidates_v6_contact_sheet.png` in the same directory. The grid is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds, with separate headers.
+- The V6 candidate-geometry audit overturns the claim that V6 unified the AnyGrasp axis semantics. Input candidates remain `candidate_frame_mode=robot_replay`, where canonical blue `+Z = raw AnyGrasp +X approach`, but V6 consumes that same rotation as red `+X = forward`. Every selected V6 stored rotation is exactly `90 deg` from `anygrasp_raw`.
+- V6 applies its `-0.05 m` candidate offset along stored red `+X`, not along raw AnyGrasp approach. For `pick_diverse_bottles/id0/frame78/right #5`, raw-center distance to the object anchor is `4.68 cm`, while the current target is `9.62 cm`. The V6 video therefore proves only that IK/joint execution can reach the incorrect target, not that the candidate-coordinate chain is correct.
+- Added read-only exporter `code_painting/export_v6_candidate_geometry_audit.py`. For frames 38/78 it produces 2x3 boards containing raw dense candidates, selected raw poses, V6 stored remap, current `-5 cm` target, object-anchor distances, and a raw-vs-target overlay. It never invokes IK and never overwrites historical assets.
+- Audit output is under `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/candidate_audit_v6/`. Both contact sheets are 1920x1152; frame 38 uses `L16/R18` and frame 78 uses `L6/R5`.
+- The later-keyframe fix that hard-filters camera-up before continuity remains valid in isolation, but the local axis to which it applies must wait for a subsequent unified `anygrasp_raw` versus `robot_replay` contract. OursV2 is unchanged.
 - Planner targets, current readback, reach checks, and visualization all use `T_W_RTCP`.
 - SAPIEN `L6_SIM` and CuRobo/server `L6_URDF` share an origin but differ by exact local-axis `Ry(+pi/2)`. Adapted same-q FK error is below `7.5e-8 m / 0.000016 deg`.
 - The server tool remains literal `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`. Preview `CGRASP -> RTCP` remapping is a separate transform.
@@ -32,7 +32,8 @@
 4. `PIPER_CANONICAL_TCP_V1.en.md`
 5. `COMMANDS/piper_canonical_tcp_v1.en.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.en.md`
-7. `COMMANDS/candidate_camera_mount_up_v6.en.md`
+7. `COMMANDS/piper_v6_candidate_geometry_audit.en.md`
+8. `COMMANDS/candidate_camera_mount_up_v6.en.md` (historical V6 reproduction with a known axis-semantic mix)
 
 ## 2026-07-16 addendum
 

@@ -1,5 +1,7 @@
 # Piper AnyGrasp red-forward camera-back-up V6 命令
 
+> **已发现轴语义混用，仅供历史复现。** V6 输入仍是 `robot_replay` rotation（蓝 `+Z = raw AnyGrasp +X approach`），但规划参数把红 `+X` 当成 forward，并沿红 X 应用 `-0.05 m`。2026-07-18 候选审计证明 stored rotation 与 `anygrasp_raw` 固定差 `90°`；本页结果不能作为候选坐标链正确性的证据。请先运行 `piper_v6_candidate_geometry_audit.zh.md` 中的审计命令。
+
 ## 当前轴规则
 
 - 红 `+X`：夹爪前进/approach。
@@ -85,4 +87,4 @@ ffprobe -v error -select_streams v:0 \
   /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v6_red_forward_camera_back_up_candidate_videos/candidate_retarget_grid_2x2_red_forward_camera_back_up_v6.mp4
 ```
 
-物体碰撞为关闭状态；该视频只验证候选坐标、相机上侧与 retargeting，不是物理抓取成功率。
+物体碰撞为关闭状态；该视频只证明当前目标能够被 IK/关节执行。由于 `robot_replay` 与 `local_x forward` 轴语义混用，它不再被视为候选坐标或相机上侧定义正确性的证据，也不是物理抓取成功率。

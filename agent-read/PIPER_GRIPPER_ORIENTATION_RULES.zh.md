@@ -340,3 +340,17 @@ dot(camera_back_or_plane_normal, world_up) >= 0
 第一关键帧选择满足 `-blue up` 的分支。后续关键帧必须先硬过滤 `top_axis_up_dot >= 0`，再在合格分支中最小化与上一关键帧的旋转差；不能把 camera-up 仅作为连续性同分项，否则 6--10 秒处可能重新翻回倒置分支。正式参数是 `--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1`，candidate offset 与 pregrasp 也都沿 local `+X`。
 
 `pick_diverse_bottles/id0` 的 V6 可达候选为 K1 `L16/R18`、K2 `L6/R5`。Orientation、Fused 和 constrained Top-score 在轴、camera-back-up、IK 与关节限位约束后收敛到同一组 ID。旧 V5 视频保留但不再用于判断轴定义。
+
+## 2026-07-18：V6 候选几何复核（修正上述“正式规则”）
+
+上述 V6 结论只根据执行视频里的 actor 几何判断了红轴方向，没有同时检查候选输入的 `candidate_frame_mode`。矩阵复核确认 V6 仍复用 `robot_replay` 候选：
+
+```text
+robot_replay local +Z = raw AnyGrasp local +X approach
+R_v6_stored = R_anygrasp_raw @ RAW_TO_CANONICAL
+rotation_distance(R_v6_stored, R_anygrasp_raw) = 90 deg
+```
+
+因此 V6 再把 stored red `+X` 当作 forward，是把 canonical 法向/侧向当作 approach。`-0.05 m` 也沿错误的 stored X 施加。frame 78 右 `#5` 的 raw center 到 right-bottle anchor 为 `4.68 cm`，当前 V6 target 为 `9.62 cm`。
+
+V6 的“camera-up 必须先硬过滤，再考虑连续性”这一算法顺序仍然正确；错误在于它被施加到混用的局部轴语义上。下一版必须二选一并贯穿候选选择、offset、camera-up、actor、IK：保留 `anygrasp_raw` 并令红 X 为 approach，或保留 `robot_replay` 并令蓝 Z 为 approach。当前 V6 仅作为历史诊断结果，不作为最终坐标轴结论。

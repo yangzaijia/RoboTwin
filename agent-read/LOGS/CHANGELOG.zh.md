@@ -3377,3 +3377,11 @@ Validation: `py_compile`、`bash -n`、wrapper dry-run、直接运行四项回�
 - 新 2×2 输出位于 `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/`，包含 MP4、config、manifest 和中英说明。三条候选 replay 15.2 s 以 `15.2/21.4` 速度同步 OursV2，标题栏独立于画面。
 
 Validation: 本地/远端 `py_compile`、`bash -n`、非法 solution-selection 枚举、wrapper dry-run 和 `tests/test_anygrasp_camera_up.py` 五项回归通过。两条正式 replay 的每帧 `-X·up` 全部为正（候选阶段约 `+0.695～+0.995`），所有源与成品通过 ffprobe；成品为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，并完成 6/8/10 秒和末帧视觉 QA。物体碰撞关闭，因此只作为定性 retargeting 可视化，不作为物理抓取成功率。
+
+## 2026-07-18（V6 AnyGrasp 候选几何审计）
+
+- 新增只读 `export_v6_candidate_geometry_audit.py`，按旧六格 contact-sheet 视觉逻辑为 `pick_diverse_bottles/id0` 的 frame 38/78 分别生成 raw dense、selected raw、stored remap、current target、anchor distance 和 overlay 六格图；不调用 IK、不覆盖旧结果。
+- 矩阵复核确认 V6 stored rotation 与 `anygrasp_raw` 固定差 `90°`：候选来源仍是 `robot_replay`（蓝 `+Z` 为 raw approach），但 V6 按红 `+X` 为 forward 并沿它施加 `-0.05 m`，属于坐标语义混用。
+- frame 78 right `#5` 从 raw center 到 object anchor 的 `4.68 cm` 增为 current target 的 `9.62 cm`；因此 V6 执行成功不能证明候选坐标链正确。V6/OursV2 视频与规划逻辑均未在本轮修改。
+
+Validation: `py_compile`、dry-run、两帧 20-candidate 输入、manifest JSON、两张 1920×1152 contact sheet 尺寸/hash 和原分辨率视觉 QA 通过。输出位于 `paper_qualitative_assets/.../candidate_audit_v6/`。

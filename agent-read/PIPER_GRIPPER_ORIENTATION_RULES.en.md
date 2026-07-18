@@ -305,3 +305,17 @@ dot(camera_back_or_plane_normal, world_up) >= 0
 The first keyframe selects a `-blue up` branch. Later keyframes must first hard-filter for `top_axis_up_dot >= 0`, then minimize rotation from the previous keyframe. Camera-up cannot remain a continuity tie-breaker, because that permits the 6--10 second transition to flip back to the inverted branch. Formal parameters are `--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1`; candidate offset and pregrasp also use local `+X`.
 
 Feasible V6 IDs for `pick_diverse_bottles/id0` are K1 `L16/R18` and K2 `L6/R5`. Orientation, Fused, and constrained Top-score converge to this same set after axis, camera-back-up, IK, and joint-limit constraints. Old V5 media remains available but must not be used to infer the axis definition.
+
+## 2026-07-18: V6 candidate-geometry recheck (correction to the formal rule above)
+
+The earlier V6 conclusion inferred red-axis semantics only from the rendered actor and did not inspect the candidate input's `candidate_frame_mode`. Matrix-level verification shows that V6 still reuses `robot_replay` candidates:
+
+```text
+robot_replay local +Z = raw AnyGrasp local +X approach
+R_v6_stored = R_anygrasp_raw @ RAW_TO_CANONICAL
+rotation_distance(R_v6_stored, R_anygrasp_raw) = 90 deg
+```
+
+Treating stored red `+X` as forward therefore uses a canonical side/normal axis as approach, and the `-0.05 m` offset follows that wrong stored X. For frame 78 right candidate `#5`, raw-center distance to the right-bottle anchor is `4.68 cm`; the current V6 target is `9.62 cm` away.
+
+The V6 ordering rule—hard-filter camera-up before continuity—remains algorithmically valid. The error is applying it to mixed local-axis semantics. A successor must choose one contract end-to-end across selection, offset, camera-up, actor rendering, and IK: retain `anygrasp_raw` with red X approach, or retain `robot_replay` with blue Z approach. Current V6 is historical diagnostic output, not the final axis conclusion.
