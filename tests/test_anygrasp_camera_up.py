@@ -149,10 +149,53 @@ def test_first_keyframe_postprocess_preserves_raw_flip_provenance() -> None:
     np.testing.assert_allclose(result.pose_world_matrix[:, 2], candidate.raw_pose_world_matrix[:, 2], atol=1e-12)
 
 
+def test_later_keyframe_keeps_camera_up_before_rotation_continuity() -> None:
+    # Raw identity is perfectly continuous with the previous keyframe but has
+    # camera-back (-Z) pointing down.  Its 180-degree roll-equivalent branch is
+    # discontinuous but camera-up, so the physical constraint must win.
+    rotation = np.eye(3, dtype=np.float64)
+    quat_wxyz = planner.base.quat_xyzw_to_wxyz(planner.R.from_matrix(rotation).as_quat())
+    raw_pose = np.concatenate([np.zeros(3, dtype=np.float64), quat_wxyz])
+    candidate = planner.CandidatePose(
+        candidate_idx=8,
+        score=1.0,
+        translation_cam=np.zeros(3, dtype=np.float64),
+        rotation_cam=rotation,
+        width_m=0.08,
+        depth_m=0.04,
+        raw_pose_world_wxyz=raw_pose,
+        raw_pose_world_matrix=planner.pose_wxyz_to_matrix(raw_pose),
+        pose_world_wxyz=raw_pose.copy(),
+        pose_world_matrix=planner.pose_wxyz_to_matrix(raw_pose),
+        nearest_object="object",
+        nearest_object_distance_m=0.0,
+        rotation_distance_deg=0.0,
+        top_axis_up_dot=-1.0,
+        original_top_axis_up_dot=-1.0,
+        camera_up_flip_applied=0,
+        forward_axis_change_deg=0.0,
+    )
+    args = SimpleNamespace(
+        candidate_camera_forward_axis="local_x",
+        candidate_camera_top_axis="z",
+        candidate_camera_top_axis_sign=-1,
+        candidate_target_local_x_offset_m=0.0,
+        candidate_target_local_z_offset_m=0.0,
+    )
+
+    result = planner.choose_roll_variant_with_previous(np.eye(3), candidate, args)
+
+    assert result.top_axis_up_dot == 1.0
+    assert result.camera_up_flip_applied == 1
+    assert result.forward_axis_change_deg == 0.0
+    np.testing.assert_allclose(result.pose_world_matrix[:3, 0], rotation[:, 0], atol=1e-12)
+
+
 if __name__ == "__main__":
     test_legacy_local_x_forward_behavior_is_preserved()
     test_canonical_local_z_forward_flips_plane_normal_only()
     test_canonical_upward_plane_normal_is_left_unchanged()
     test_canonical_negative_x_plane_normal_uses_opposite_equivalent_branch()
     test_first_keyframe_postprocess_preserves_raw_flip_provenance()
-    print("camera-up regression tests: 5 passed")
+    test_later_keyframe_keeps_camera_up_before_rotation_continuity()
+    print("camera-up regression tests: 6 passed")

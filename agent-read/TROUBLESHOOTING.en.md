@@ -111,14 +111,22 @@
 - The correct path is `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`, not `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`.
 - This path check fails before the exporter starts and therefore does not rewrite the formal output. Correct the interpreter and rerun with `--overwrite`.
 
-## Canonical candidate wrist/camera appears below the gripper
+## Camera is inverted in V5/V4 and the wrist flips again around 6--10 seconds
+
+- Current root cause: V5 treated camera mount translation `-X` as orientation and mislabeled blue `+Z` as Piper AnyGrasp forward. Later keyframes also treated camera-up only as a continuity tie-breaker and could deliberately choose the inverted branch again.
+- Correct axes: red `+X` forward, green `+Y` jaw opening, blue `+Z` plane normal. Preserve red and require `-blue dot world_up >= 0`.
+- Correct parameters: `--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1 --candidate_target_local_x_offset_m -0.05 --approach_axis local_x`.
+- Check every selected keyframe in `plan_summary.json` for nonnegative `top_axis_up_dot`, not just keyframe 1. Each candidate must also pass IK and joint-limit checks; do not manufacture success by relaxing reach tolerance.
+- Verified output: `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/`, K1 `L16/R18`, K2 `L6/R5`.
+
+## ~~Canonical candidate wrist/camera appears below the gripper~~ (withdrawn local-Z diagnosis)
 
 - Symptom: blue local `+Z` has the intended approach direction, but the wrist is rolled 180 degrees about blue and red local `+X` (the opening--approach-plane normal) points downward in world.
 - Cause: legacy `--candidate_keep_camera_up` assumed local-X-forward and used `diag(+1,-1,-1)`. Canonical `robot_replay` uses local `+Z` as forward, so the legacy flip cannot be reused safely.
 - Check `candidate_camera_forward_axis`, `candidate_camera_top_axis`, `top_axis_up_dot`, `camera_up_flip_applied`, and `forward_axis_change_deg` in `plan_summary.json`. Canonical output should report `local_z`, `x`, nonnegative up dot, and about zero-degree forward change when flipped.
 - Fix: explicitly pass `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`. This only selects between two equivalent parallel-jaw roll branches; it does not guarantee IK success. Do not hide IK branch divergence by blindly increasing replan attempts.
 
-## V4 camera remains upside down and the wrist rolls around 6--10 seconds
+## ~~V4 camera remains upside down and the wrist rolls around 6--10 seconds~~ (withdrawn V5-era diagnosis)
 
 - Symptom: Orientation/Fused/Top-score end with the camera side down and the axes roll mid-sequence. Red points upward while the calibrated camera body is on the lower side.
 - Cause 1: V4 treated red local `+X` as the camera top. The 0515 extrinsics place the camera body on link6 local `-X`, so the sign was reversed.

@@ -1,5 +1,7 @@
 # Calibrated camera-mount-up V5 commands
 
+> **Withdrawn; historical reproduction only.** V5 inferred orientation from camera mount translation and used the wrong `local_z` forward axis. Do not use this page for new results; use `candidate_camera_mount_up_v6.en.md`.
+
 ## Purpose and axes
 
 Use these commands for qualitative Piper replay of canonical local-Z-forward AnyGrasp candidates. Debug axes are X red, Y green, Z blue. The calibrated 0515 wrist camera is on link6 local `-X`, so mount-up is `-X dot world_Z > 0`. V5 leaves OursV2/V4 untouched and writes to isolated roots.

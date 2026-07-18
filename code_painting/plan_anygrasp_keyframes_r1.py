@@ -266,9 +266,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate_orientation_remap_label", type=str, default="identity")
     parser.add_argument("--candidate_post_rot_xyz_deg", type=float, nargs=3, default=[0.0, 0.0, 0.0])
     parser.add_argument("--candidate_keep_camera_up", type=int, default=0, help="If 1, keep the gripper/camera top side facing upward overall while preserving the original grasp direction. The planner only resolves the redundant 180-degree roll about --candidate_camera_forward_axis.")
-    parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. local_x retains the legacy AnyGrasp/R1 behavior; local_z is for canonical robot-replay candidates.")
+    parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. Piper AnyGrasp uses red local +X as forward; local_z is retained only for legacy/remapped candidate sets that explicitly define blue +Z as forward.")
     parser.add_argument("--candidate_camera_top_axis", choices=["x", "y", "z"], default="z", help="Local gripper axis used by the camera/top preference when --candidate_keep_camera_up=1.")
-    parser.add_argument("--candidate_camera_top_axis_sign", type=int, choices=[-1, 1], default=1, help="Signed direction of --candidate_camera_top_axis. Legacy behavior is +1. Canonical local-Z-forward Piper uses x with -1 because approach cross opening is Z cross Y = -X and the 0515 wrist camera is mounted primarily on the local -X side.")
+    parser.add_argument("--candidate_camera_top_axis_sign", type=int, choices=[-1, 1], default=1, help="Signed direction of --candidate_camera_top_axis. For the verified Piper AnyGrasp contract use forward=local_x, top=z, sign=-1: preserve red +X forward and prefer camera-back/plane-normal -blue upward. Do not infer orientation from the camera translation vector.")
     parser.add_argument("--candidate_target_local_x_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +X before planning/visualization. In the default identity AnyGrasp frame this is the AnyGrasp finger-depth axis, which is not the same convention as direct hand replay's local +Z approach axis.")
     parser.add_argument("--candidate_target_local_z_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +Z before planning/visualization. Use this with --candidate_orientation_remap_label swap_red_blue to reproduce the direct replay convention where blue local +Z is the approach/forward axis.")
     parser.add_argument("--manual_candidate", type=str, nargs=3, action="append", default=[], metavar=("FRAME", "ARM", "CANDIDATE_IDX"), help="Optional manual candidate override, e.g. --manual_candidate 1 left 5. Partial overrides only reorder debug display; full two-frame overrides for one arm drive selection directly.")
@@ -1434,6 +1434,13 @@ def choose_roll_variant_with_previous(
         build_candidate_pose_variant(candidate, args, flip_roll_180=False, selection_mode="follow_previous_base"),
         build_candidate_pose_variant(candidate, args, flip_roll_180=True, selection_mode="follow_previous_flip180"),
     ]
+    # Camera-up is a hard physical constraint, not a continuity tie-breaker.
+    # The old ordering could choose the inverted branch at later keyframes when
+    # it happened to be closer to the previous wrist rotation.  That produced
+    # a visible 180-degree wrist roll followed by a camera-down final pose.
+    camera_up_variants = [cand for cand in variants if float(cand.top_axis_up_dot) >= -1e-9]
+    if camera_up_variants:
+        variants = camera_up_variants
     prev_rot = base.orthonormalize_rotation(previous_rotation_world)
     variants.sort(
         key=lambda cand: (
@@ -5032,6 +5039,11 @@ def export_rank_preview_images(
 
                 renderer.update_robot_link_cameras()
                 renderer.scene.update_render()
+                axis_contract = (
+                    "axes: X=red(+X forward) Y=green(opening) Z=blue(normal)"
+                    if str(args.debug_gripper_actor_forward_axis) == "local_x"
+                    else "axes: X=red(normal) Y=green(opening) Z=blue(+Z forward)"
+                )
                 overlay_lines = [
                     "mode=rank_preview",
                     f"source_frame={frame}",
@@ -5049,7 +5061,7 @@ def export_rank_preview_images(
                         else "right_candidate=none"
                     ),
                     "2D C-gripper overlay: left=blue right=orange",
-                    "axes: X=red Y=green Z=blue(+Z approach)",
+                    axis_contract,
                     candidate_target_debug_line(left_cand, "L", object_states),
                     candidate_target_debug_line(right_cand, "R", object_states),
                     candidate_projection_debug_line(renderer.zed_camera, head_intrinsic, left_cand, "L", int(args.image_width), int(args.image_height)),

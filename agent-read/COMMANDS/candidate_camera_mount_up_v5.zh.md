@@ -1,5 +1,7 @@
 # Calibrated camera-mount-up V5 命令
 
+> **已撤销，仅供历史复现。** V5 把相机安装平移误当成姿态，并使用了错误的 `local_z` 前进轴。不要将本页命令用于新结果；请使用 `candidate_camera_mount_up_v6.zh.md`。
+
 ## 用途与轴定义
 
 用于 canonical local-Z-forward AnyGrasp 候选的 Piper 定性 replay。局部轴颜色为 X 红、Y 绿、Z 蓝；0515 腕部相机位于 link6 local `-X` 一侧，所以 mount-up 使用 `-X·world_Z > 0`。V5 不修改 OursV2/V4，并写入独立目录。

@@ -268,7 +268,9 @@ Do not reuse legacy `diag(+1,-1,-1)` for canonical local-Z candidates. That matr
 
 This rule only resolves the parallel-jaw wrist-roll ambiguity. It does not change candidate identity, approach direction, or target position, and it does not replace IK reachability or collision checks. OursV2 human-target replay does not use this AnyGrasp-candidate post-processing.
 
-## 2026-07-17: V5 calibrated camera mount side and link6 adapter
+## ~~2026-07-17: V5 calibrated camera mount side and link6 adapter~~ (withdrawn)
+
+> V5 treated wrist-camera mount translation as camera orientation and mislabeled Piper AnyGrasp forward as local `+Z`. The text below is retained only to reproduce old V5 outputs and is not the current axis rule.
 
 The 0515 wrist extrinsic translations in link6 local coordinates are left `[-0.0743,+0.0207,+0.0936] m` and right `[-0.0600,-0.0274,+0.0894] m`, placing the camera body primarily on local `-X`. The correct mount-up criterion is:
 
@@ -287,3 +289,19 @@ R_sapien_link6 = R_curobo_link6 @ Ry(-90 deg)
 ```
 
 V5 uses `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1`, `--piper_apply_global_trans_to_ik 1`, and `--piper_apply_curobo_to_sapien_link_rotation 1`. To remove V4 Cartesian-waypoint wrist-branch jumps, formal routes use stage-endpoint IK, 40-waypoint joint interpolation, and 64 seeds. The constrained Top-score run additionally uses `joint_continuity`, while the successful Orientation/Fused run retains `pose_error`. Camera-up does not imply executability: a candidate at a hard joint limit must be replaced by the next candidate in the same strategy ranking that satisfies mount-up, IK, and joint-limit feasibility, and the output must be labeled constrained/feasible.
+
+## 2026-07-18: V6 formal red-forward and camera-back-up rule
+
+Candidate geometry and rendered colors establish the actual contract: red `+X` is gripper forward/approach, green `+Y` is parallel-jaw opening, and blue `+Z` is the normal of that plane. A 0515 camera translation says where the camera is mounted, not where it points, so the V5 `-X` mount-normal inference is invalid.
+
+V6 preserves red `+X` and only chooses between the two 180-degree finger-swap branches about red:
+
+```text
+forward = R[:, 0]                 # red +X
+camera_back_or_plane_normal = -R[:, 2]
+dot(camera_back_or_plane_normal, world_up) >= 0
+```
+
+The first keyframe selects a `-blue up` branch. Later keyframes must first hard-filter for `top_axis_up_dot >= 0`, then minimize rotation from the previous keyframe. Camera-up cannot remain a continuity tie-breaker, because that permits the 6--10 second transition to flip back to the inverted branch. Formal parameters are `--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1`; candidate offset and pregrasp also use local `+X`.
+
+Feasible V6 IDs for `pick_diverse_bottles/id0` are K1 `L16/R18` and K2 `L6/R5`. Orientation, Fused, and constrained Top-score converge to this same set after axis, camera-back-up, IK, and joint-limit constraints. Old V5 media remains available but must not be used to infer the axis definition.

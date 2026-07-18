@@ -7,12 +7,11 @@
 
 ## Added in this change
 
-- V4 incorrectly treated red local `+X` as the top side of the calibrated 0515 wrist camera. The camera is mounted primarily on the link6 local `-X` side. Canonical axes remain blue `+Z` approach, green `+Y` jaw opening, and red `+X=+Y×+Z`, but mount-up is `dot(-R[:,0], world +Z)>0`; a downward red arrow is normally evidence that the camera side is up.
-- V5 adds `--candidate_camera_top_axis_sign=-1` and applies both the Piper global-axis conversion and the fixed Curobo-to-SAPIEN link6 local `Ry(-90 deg)` adapter. Legacy defaults remain 0/+1, preserving historical planners, V1-V4, and OursV2.
-- The V4 wrist roll around 6-10 seconds came from Cartesian waypoint IK, one seed, an approximately 180-degree relaxed rotation threshold, and the missing link6 adapter. V5 uses endpoint IK, 40-waypoint joint interpolation, 64 seeds, and optional `joint_continuity` solution selection.
-- The formal `pick_diverse_bottles/id0` V5 2x2 is under `paper_qualitative_assets/.../id0/v5_camera_mount_up_candidate_videos/candidate_retarget_grid_2x2_camera_mount_up_v5.mp4`. Orientation/Fused use K1 `L16/R9`, K2 `L19/R16`; constrained Top-score uses K1 `L1/R3`, K2 `L3/R1`; OursV2 is unchanged.
-- Raw K2-left Top-score candidate `#0` puts J5 exactly at its `+1.2217 rad` upper limit and produces a `57 mm` action miss. Using the next score-ranked mount-up/IK/joint-limit-feasible candidate `#3` reduces left/right action error to `3.0/7.7 mm`, with every stage reached.
-- Actual `-X·up` stays positive in every recorded V5 frame (approximately `+0.695..+0.995` after candidate acquisition), and both replays report `execution_failed=false`. The final grid is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds, with separate headers. Object collisions are disabled, so it is a qualitative retargeting visualization rather than a physics-valid grasp benchmark.
+- The V5 axis conclusion is withdrawn. It inferred camera orientation from the `-X` mount translation and treated blue `+Z` as Piper AnyGrasp forward. Video and candidate geometry show the correct contract is red `+X` forward, green `+Y` jaw opening, and blue `+Z` plane normal; camera-back-up preserves red and requires `-R[:,2] dot world_up >= 0`.
+- The old later-keyframe logic treated camera-up only as a continuity tie-breaker, so it could select the inverted branch to reduce rotation. V6 first hard-filters for camera-up, then minimizes rotation from the previous keyframe. A regression test covers this 180-degree conflict.
+- V6 uses the local-X `-0.05 m` candidate offset and `0.12 m` pregrasp, stage-endpoint IK, 40-point joint interpolation, 64 seeds, and `joint_continuity`. Feasible IDs for `pick_diverse_bottles/id0` are K1 `L16/R18` and K2 `L6/R5`; Orientation, Fused, and constrained Top-score converge to the same IDs after all constraints. OursV2 is unchanged.
+- Actual K1 grasp errors are left `3.1 mm/0.17 deg` and right `2.5 mm/0.14 deg`; K2 action errors are left `3.1 mm/21.28 deg` and right `6.6 mm/4.52 deg`, with every stage reached. Object collisions remain disabled, so this is qualitative retargeting visualization rather than physical grasp-success evaluation.
+- The formal V6 video is `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/candidate_retarget_grid_2x2_red_forward_camera_back_up_v6.mp4`; the matched candidate sheet is `selected_candidates/selected_anygrasp_candidates_v6_contact_sheet.png` in the same directory. The grid is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds, with separate headers.
 - Planner targets, current readback, reach checks, and visualization all use `T_W_RTCP`.
 - SAPIEN `L6_SIM` and CuRobo/server `L6_URDF` share an origin but differ by exact local-axis `Ry(+pi/2)`. Adapted same-q FK error is below `7.5e-8 m / 0.000016 deg`.
 - The server tool remains literal `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`. Preview `CGRASP -> RTCP` remapping is a separate transform.
@@ -33,7 +32,7 @@
 4. `PIPER_CANONICAL_TCP_V1.en.md`
 5. `COMMANDS/piper_canonical_tcp_v1.en.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.en.md`
-7. `COMMANDS/candidate_camera_mount_up_v5.en.md`
+7. `COMMANDS/candidate_camera_mount_up_v6.en.md`
 
 ## 2026-07-16 addendum
 

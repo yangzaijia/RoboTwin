@@ -1,5 +1,13 @@
 # CHANGELOG.en
 
+## 2026-07-18 (Piper AnyGrasp red-forward camera-back-up V6)
+
+- Withdrew the V5 local-Z-forward/`-X` mount-normal conclusion. Camera mount translation cannot determine camera orientation. Correct rendered axes are red `+X` forward, green `+Y` jaw opening, and blue `+Z` plane normal; camera-back-up requires `-blue dot world_up >= 0`.
+- Fixed later-keyframe roll selection to hard-filter camera-up branches before rotation-continuity sorting. Added a regression test preventing the 6--10 second transition from flipping back to the inverted branch. Rank-preview axis labels now follow `debug_gripper_actor_forward_axis` dynamically.
+- Final feasible IDs for `pick_diverse_bottles/id0` are K1 `L16/R18` and K2 `L6/R5`. K1 grasp errors are left/right `3.1/2.5 mm` and `0.17/0.14 deg`; K2 action errors are `3.1/6.6 mm` and `21.28/4.52 deg`, with every stage reached.
+- Wrote the V6 2x2 grid and matched candidate sheet under `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/` without overwriting V5. The video is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 seconds.
+- Validation: 6/6 `tests/test_anygrasp_camera_up.py`, `git diff --check`, `py_compile`, JSON dry-run, ffprobe, and extracted-frame visual QA passed.
+
 ## 2026-07-15 (PiperCanonicalTCP-v1 VS Code video compatibility and provenance semantics)
 
 - Added `code_painting/piper_canonical_tcp_v1/vscode_video.py` to audit MP4 codec/pixel format and convert non-H.264 files to H.264, `yuv420p`, and faststart. A temporary file must pass ffprobe, geometry/frame-count, and full-decode checks before atomic replacement; the manifest records before/after SHA-256 values.

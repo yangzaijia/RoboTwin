@@ -1,5 +1,13 @@
 # CHANGELOG.zh
 
+## 2026-07-18（Piper AnyGrasp red-forward camera-back-up V6）
+
+- 撤销 V5 的 local-Z-forward/`-X` mount-normal 结论：相机安装平移不能推导相机姿态；正确颜色轴为红 `+X` 前进、绿 `+Y` 开合、蓝 `+Z` 平面法向，camera-back-up 要求 `-blue·world_up >= 0`。
+- 修复后续关键帧 roll 选择：先硬过滤 camera-up 分支，再按上一关键帧旋转连续性排序；新增回归测试，防止 6--10 秒重新翻回倒置分支。rank preview 轴标签现在按 `debug_gripper_actor_forward_axis` 动态生成。
+- `pick_diverse_bottles/id0` 最终可达候选为 K1 `L16/R18`、K2 `L6/R5`；K1 抓取误差左/右 `3.1/2.5 mm`、`0.17/0.14°`，K2 action `3.1/6.6 mm`、`21.28/4.52°`，全部 stage reached。
+- 新 V6 四宫格与对应候选总图写入 `paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/`，不覆盖 V5；视频为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s。
+- 验证：`tests/test_anygrasp_camera_up.py` 6/6、`git diff --check`、`py_compile`、JSON dry-run、ffprobe 和抽帧视觉 QA 通过。
+
 ## 2026-07-15（PiperCanonicalTCP-v1 VSCode 视频兼容性与来源语义）
 
 - 新增 `code_painting/piper_canonical_tcp_v1/vscode_video.py`：审计 MP4 codec/pix_fmt，并把非 H.264 文件转换为 H.264、`yuv420p`、faststart；临时文件必须通过 ffprobe、尺寸/帧数和完整解码检查后才原子替换，manifest 记录转换前后 SHA-256。

@@ -303,7 +303,9 @@ R_flip = R @ diag(-1, -1, +1)
 
 这条规则只消除平行夹爪的离散 wrist-roll 二义性，不改变候选编号、接近方向或目标位置，也不替代 IK 可达性/碰撞检查。OursV2 human-target replay 不经过该 AnyGrasp candidate 后处理。
 
-## 2026-07-17：V5 校准相机安装侧与 link6 适配
+## ~~2026-07-17：V5 校准相机安装侧与 link6 适配~~（已撤销）
+
+> V5 把腕部相机的安装平移方向当成了相机姿态方向，并把 Piper AnyGrasp 的前进轴误写成 local `+Z`。以下内容仅用于复现旧 V5，不得作为当前轴规则。
 
 0515 wrist 外参的 link6 局部平移为左 `[-0.0743,+0.0207,+0.0936] m`、右 `[-0.0600,-0.0274,+0.0894] m`，相机主体位于 local `-X` 一侧。因此正确的 mount-up 判据是：
 
@@ -322,3 +324,19 @@ R_sapien_link6 = R_curobo_link6 @ Ry(-90 deg)
 ```
 
 V5 使用 `--candidate_camera_top_axis x --candidate_camera_top_axis_sign -1`、`--piper_apply_global_trans_to_ik 1` 和 `--piper_apply_curobo_to_sapien_link_rotation 1`。为避免 V4 逐 waypoint IK 的 wrist branch 跳变，正式路径使用 stage endpoint IK、40 点关节插值和 64 seeds；Top-score-feasible 额外使用 `joint_continuity`，已成功的 Orientation/Fused 保留 `pose_error`。camera-up 仍不等于可执行：候选若把关节推到硬限位，必须使用同一策略排序中下一项满足 mount-up、IK 和关节限位的候选，并在标题/manifest 中标为 constrained/feasible。
+
+## 2026-07-18：V6 红轴前进与 camera-back-up 正式规则
+
+实际候选几何与视频中的颜色轴为：红 `+X` 是夹爪前进/approach，绿 `+Y` 是平行两指开合，蓝 `+Z` 是两者平面的法向。0515 标定中的相机平移只说明相机装在哪里，不能说明相机朝哪里；因此 V5 的 `-X` mount-normal 推断无效。
+
+V6 保持红 `+X` 不变，只在绕红轴 180° 的两指等价分支之间选择，并要求：
+
+```text
+forward = R[:, 0]                 # red +X
+camera_back_or_plane_normal = -R[:, 2]
+dot(camera_back_or_plane_normal, world_up) >= 0
+```
+
+第一关键帧选择满足 `-blue up` 的分支。后续关键帧必须先硬过滤 `top_axis_up_dot >= 0`，再在合格分支中最小化与上一关键帧的旋转差；不能把 camera-up 仅作为连续性同分项，否则 6--10 秒处可能重新翻回倒置分支。正式参数是 `--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1`，candidate offset 与 pregrasp 也都沿 local `+X`。
+
+`pick_diverse_bottles/id0` 的 V6 可达候选为 K1 `L16/R18`、K2 `L6/R5`。Orientation、Fused 和 constrained Top-score 在轴、camera-back-up、IK 与关节限位约束后收敛到同一组 ID。旧 V5 视频保留但不再用于判断轴定义。

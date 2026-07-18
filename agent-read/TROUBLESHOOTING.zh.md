@@ -111,14 +111,22 @@
 - 正确路径是 `/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10`，不是 `/home/zaijia001/ssd/RoboTwin_bw/bin/python3.10`。
 - 路径检查失败发生在导出器启动前，不会改写正式输出目录；修正解释器后再运行 `--overwrite`。
 
-## Canonical candidate 的腕部/相机看起来在夹爪下方
+## V5/V4 中相机倒置，且 6--10 秒重新翻腕
+
+- 当前根因：V5 把相机安装平移 `-X` 当成姿态，并把蓝 `+Z` 错当成 Piper AnyGrasp 前进轴；后续关键帧又把 camera-up 只当连续性同分项，可能主动选回倒置分支。
+- 正确轴：红 `+X` 前进、绿 `+Y` 开合、蓝 `+Z` 平面法向。保持红轴并要求 `-blue·world_up >= 0`。
+- 正确参数：`--candidate_camera_forward_axis local_x --candidate_camera_top_axis z --candidate_camera_top_axis_sign -1 --candidate_target_local_x_offset_m -0.05 --approach_axis local_x`。
+- 检查：`plan_summary.json` 中每个选中关键帧的 `top_axis_up_dot` 必须非负；不能只检查第一关键帧。候选还必须分别通过 IK 和关节限位，不能靠放宽 reach tolerance 伪装成功。
+- 已验证输出：`paper_qualitative_assets/.../id0/v6_red_forward_camera_back_up_candidate_videos/`，K1 `L16/R18`、K2 `L6/R5`。
+
+## ~~Canonical candidate 的腕部/相机看起来在夹爪下方~~（旧 local-Z 诊断，已撤销）
 
 - 症状：蓝色 local `+Z` 接近方向合理，但腕部绕蓝轴翻了 180°，红色 local `+X`（开合--前进平面法线）指向 world 下方。
 - 原因：旧 `--candidate_keep_camera_up` 只按 local-X-forward 使用 `diag(+1,-1,-1)`；canonical `robot_replay` 实际以 local `+Z` 为 forward，不能安全复用旧翻转。
 - 检查：在 `plan_summary.json` 查看 `candidate_camera_forward_axis`、`candidate_camera_top_axis`、`top_axis_up_dot`、`camera_up_flip_applied` 和 `forward_axis_change_deg`。canonical 期望 `local_z`、`x`、up dot 非负、被翻转时 forward change 约 0°。
 - 处理：显式传 `--candidate_keep_camera_up 1 --candidate_camera_forward_axis local_z --candidate_camera_top_axis x`。这只在两个平行夹爪等价 roll 分支间选择，不保证 IK 成功；不要用增加 replan 次数掩盖 IK 分支发散。
 
-## V4 相机仍朝下，且 6--10 秒发生腕部旋转
+## ~~V4 相机仍朝下，且 6--10 秒发生腕部旋转~~（V5 历史诊断，已撤销）
 
 - 症状：V4 中 Orientation/Fused/Top-score 最终看起来相机朝下，中段坐标轴突然 roll；红轴朝上但真实相机安装侧反而在下方。
 - 根因 1：V4 把红色 local `+X` 当成相机顶面；0515 外参显示相机主体实际在 link6 local `-X` 侧，判据符号反了。
