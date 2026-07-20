@@ -38,6 +38,8 @@ IK_SOLUTION_SELECTION=pose_error
 PIPER_APPLY_GLOBAL_TRANS_TO_IK=0
 PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION=0
 CANDIDATE_ORIENTATION_REMAP_LABEL=identity
+CANDIDATE_INPUT_FRAME_CONTRACT=auto
+CANDIDATE_FRAME_CONTRACT=legacy_unchecked
 CANDIDATE_SELECTION_MODE=planner
 CANDIDATE_MAX_ROTATION_DISTANCE_DEG=-1.0
 CANDIDATE_KEEP_CAMERA_UP=0
@@ -235,6 +237,22 @@ while (($# > 0)); do
       ;;
     --candidate_orientation_remap_label)
       CANDIDATE_ORIENTATION_REMAP_LABEL="$2"
+      shift 2
+      ;;
+    --candidate_input_frame_contract)
+      CANDIDATE_INPUT_FRAME_CONTRACT="$2"
+      if [[ "$CANDIDATE_INPUT_FRAME_CONTRACT" != "auto" && "$CANDIDATE_INPUT_FRAME_CONTRACT" != "anygrasp_raw" && "$CANDIDATE_INPUT_FRAME_CONTRACT" != "robot_replay" ]]; then
+        echo "ERROR: --candidate_input_frame_contract must be auto, anygrasp_raw, or robot_replay" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
+    --candidate_frame_contract)
+      CANDIDATE_FRAME_CONTRACT="$2"
+      if [[ "$CANDIDATE_FRAME_CONTRACT" != "legacy_unchecked" && "$CANDIDATE_FRAME_CONTRACT" != "anygrasp_raw" && "$CANDIDATE_FRAME_CONTRACT" != "robot_replay" ]]; then
+        echo "ERROR: --candidate_frame_contract must be legacy_unchecked, anygrasp_raw, or robot_replay" >&2
+        exit 2
+      fi
       shift 2
       ;;
     --candidate_selection_mode)
@@ -462,7 +480,7 @@ for TASK in "${TASKS[@]}"; do
     done
     IDS=("${FILTERED_IDS[@]}")
   fi
-  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} reach_rot_tol_deg=${REACH_ROT_TOL_DEG} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} ik_num_seeds=${IK_NUM_SEEDS} ik_solution_selection=${IK_SOLUTION_SELECTION} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} piper_curobo_sapien_link_rot=${PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} manual_candidates=$((${#MANUAL_CANDIDATE_ARGS[@]} / 4)) remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} keep_camera_up=${CANDIDATE_KEEP_CAMERA_UP} camera_forward=${CANDIDATE_CAMERA_FORWARD_AXIS} camera_top=${CANDIDATE_CAMERA_TOP_AXIS} camera_top_sign=${CANDIDATE_CAMERA_TOP_AXIS_SIGN} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
+  echo "===== run D435 planner task=${TASK} summaries=${#IDS[@]} max_per_task=${MAX_PER_TASK} dry_run=${DRY_RUN} viewer=${VIEWER} debug_stop_after_keyframe1=${DEBUG_STOP_AFTER_KEYFRAME1} trajectory_mode=${TRAJECTORY_MODE} dual_require_all=${DUAL_STAGE_REQUIRE_ALL_PLANS} reach_pose=${REACH_ERROR_POSE_SOURCE} reach_rot_tol_deg=${REACH_ROT_TOL_DEG} visualize_targets=${VISUALIZE_TARGETS} target_axes_only=${TARGET_AXES_ONLY} collisions=${ENABLE_EXECUTION_COLLISIONS} pure_scene=${PURE_SCENE_OUTPUT} partial_cartesian=${EXECUTE_PARTIAL_CARTESIAN_PLAN} ik_max_pos=${IK_MAX_POSITION_THRESHOLD_M} ik_max_rot=${IK_MAX_ROTATION_THRESHOLD_RAD} ik_num_seeds=${IK_NUM_SEEDS} ik_solution_selection=${IK_SOLUTION_SELECTION} piper_global_trans_ik=${PIPER_APPLY_GLOBAL_TRANS_TO_IK} piper_curobo_sapien_link_rot=${PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION} preview_root=${PREVIEW_ROOT_BASE} preview_group=${REUSE_PREVIEW_CANDIDATE_GROUP} manual_candidates=$((${#MANUAL_CANDIDATE_ARGS[@]} / 4)) remap=${CANDIDATE_ORIENTATION_REMAP_LABEL} input_frame_contract=${CANDIDATE_INPUT_FRAME_CONTRACT} frame_contract=${CANDIDATE_FRAME_CONTRACT} keep_camera_up=${CANDIDATE_KEEP_CAMERA_UP} camera_forward=${CANDIDATE_CAMERA_FORWARD_AXIS} camera_top=${CANDIDATE_CAMERA_TOP_AXIS} camera_top_sign=${CANDIDATE_CAMERA_TOP_AXIS_SIGN} local_x_offset=${CANDIDATE_TARGET_LOCAL_X_OFFSET_M} local_z_offset=${CANDIDATE_TARGET_LOCAL_Z_OFFSET_M} approach_axis=${APPROACH_AXIS} approach_offset=${APPROACH_OFFSET_M} gripper_actor_forward=${DEBUG_GRIPPER_ACTOR_FORWARD_AXIS} exec_steps=${EXECUTE_INTERP_STEPS} scene_steps=${JOINT_COMMAND_SCENE_STEPS} ====="
   for ID in "${IDS[@]}"; do
     ANY=${ANY_ROOT}/foundation_input_${ID}
     REPLAY=/home/zaijia001/ssd/data/piper/hand/${TASK}/foundation_replay_d435/foundation_input_${ID}
@@ -524,6 +542,8 @@ for TASK in "${TASKS[@]}"; do
       --piper_urdfik_apply_curobo_to_sapien_link_rotation ${PIPER_APPLY_CUROBO_TO_SAPIEN_LINK_ROTATION} \
       --candidate_selection_mode ${CANDIDATE_SELECTION_MODE} \
       --candidate_max_rotation_distance_deg ${CANDIDATE_MAX_ROTATION_DISTANCE_DEG} \
+      --candidate_input_frame_contract ${CANDIDATE_INPUT_FRAME_CONTRACT} \
+      --candidate_frame_contract ${CANDIDATE_FRAME_CONTRACT} \
       --candidate_keep_camera_up ${CANDIDATE_KEEP_CAMERA_UP} \
       --candidate_camera_forward_axis "${CANDIDATE_CAMERA_FORWARD_AXIS}" \
       --candidate_camera_top_axis "${CANDIDATE_CAMERA_TOP_AXIS}" \

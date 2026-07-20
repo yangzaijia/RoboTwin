@@ -140,3 +140,10 @@
 - 诊断：查看 `[joint-settle-miss]` 的逐关节 target/current/delta。若 target 精确等于 URDF 上/下限，说明候选落在关节边界，不是坐标轴又错了。
 - `pick_diverse_bottles/id0` raw Top-score K2-left `#0` 的 J5 为 `+1.2217 rad` 上限，实际 action miss 约 `57 mm`；使用同一排序中下一项 mount-up/IK/joint-limit-feasible 的 `#3` 后降为 `3.0 mm`。
 - 不应靠放宽 reach tolerance 把该失败标成成功；输出必须把替代候选标成 constrained/feasible。
+
+## robot_replay 转成 Piper +X 后仍有约 52--56° 固定旋转误差
+
+- 症状：位置误差只有 2--3 mm，但双臂旋转误差固定在约 52--56°。
+- 原因：候选侧显式乘了 `robot_replay→raw/Piper Ry(-90°)`，同时 IK 的 `piper_apply_curobo_to_sapien_link_rotation=1` 又执行同类 link6 adapter，形成重复补偿。
+- 处理：候选保持 `candidate_input_frame_contract=robot_replay`、`candidate_frame_contract=robot_replay`、`candidate_orientation_remap_label=identity`；使用 local-Z forward/top-X/sign -1，并保留一次 IK link adapter。
+- 检查：`plan_summary.json` 必须记录两个 robot_replay contract；六联图映射误差应为 0°；不要用放宽 rotation tolerance 隐藏重复补偿。

@@ -3385,3 +3385,12 @@ Validation: 本地/远端 `py_compile`、`bash -n`、非法 solution-selection �
 - frame 78 right `#5` 从 raw center 到 object anchor 的 `4.68 cm` 增为 current target 的 `9.62 cm`；因此 V6 执行成功不能证明候选坐标链正确。V6/OursV2 视频与规划逻辑均未在本轮修改。
 
 Validation: `py_compile`、dry-run、两帧 20-candidate 输入、manifest JSON、两张 1920×1152 contact sheet 尺寸/hash 和原分辨率视觉 QA 通过。输出位于 `paper_qualitative_assets/.../candidate_audit_v6/`。
+
+## 2026-07-20（V7 候选 frame contract 与单次 link6 映射）
+
+- planner/wrapper 新增 `candidate_input_frame_contract`，并对 preview 声明、source→planner remap、local axis、offset、approach 和 debug actor 做 fail-fast 契约检查；旧 `legacy_unchecked` 默认保持。
+- 新增 V7 六联审计导出器，raw 使用 local-X actor、canonical/target 使用 local-Z actor，记录三组物理轴映射误差和 object-anchor 距离。
+- `pick_diverse_bottles/id0` 使用 K1 `L16/R9`、K2 `L19/R16` 完成 pregrasp/grasp/action；六联图三组映射误差均为 0°，四视角视频为 H.264/yuv420p、1280×1036、30 fps、456 帧/15.2 s。
+- 诊断并排除候选侧第二次 `Ry(-90°)`：该错误版本位置可到 2--3 mm，但旋转残差为 52--56°。V6/OursV2 未覆盖。
+
+Validation: `py_compile`、`bash -n`、12 项直接回归测试、wrapper dry-run、单 episode 实跑、contact-sheet 原分辨率视觉 QA、合成 dry-run、ffprobe 与 8 秒抽帧 QA 均通过。

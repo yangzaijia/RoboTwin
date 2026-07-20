@@ -1,5 +1,16 @@
 # Piper 夹爪朝向规则说明
 
+## 2026-07-20 V7 权威链路（覆盖 V4--V6 的冲突解释）
+
+- AnyGrasp raw：红 `+X` approach，绿 `+Y` opening，蓝 `+Z` plane normal。
+- robot_replay canonical：蓝 `+Z = raw +X` approach，绿 `+Y = raw +Y` opening，`-红 -X = raw +Z` plane normal。
+- 因此 raw 与 canonical 是同一物理夹爪的换基，不是把夹爪旋转 90°。用各自正确的 `local_x`/`local_z` actor 绘制时，实体轮廓必须重合。
+- Piper IK 已在 `piper_apply_curobo_to_sapien_link_rotation=1` 中执行一次 link6 `Ry(-90°)` 适配；候选旋转保持 robot_replay，不再额外乘相同矩阵。
+- 0515 camera-back-up 判据为 `-canonical X = raw +Z` 朝 world up；等价参数是 `forward=local_z, top=x, sign=-1`。5 cm target offset 和 12 cm pregrasp 都沿 canonical local Z。
+- V6 的 `robot_replay rotation + local-X forward` 是历史错误；成功执行只能证明那个错误目标可达。
+
+V7 验证图中 `raw +X↔canonical +Z`、`raw +Y↔canonical +Y`、`raw +Z↔-canonical X` 均为 `0°`。对应命令见 `COMMANDS/candidate_frame_contract_v7.zh.md`。
+
 ## 当前结论
 
 在当前 `pnp_star_pear_hamer_output_v2/hand_detections_0.npz` 和 `PiperPika` 标定场景下，图里的 RGB 轴含义可以按下面理解：

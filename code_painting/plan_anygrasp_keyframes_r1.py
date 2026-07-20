@@ -12,7 +12,7 @@ import sys
 import time
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -265,12 +265,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--debug_visualize_selected_keyframe_axes", type=int, default=1, help="If 1, show selected-keyframe axis actors in addition to the active target axes. Set 0 for target-axes-only viewer debugging.")
     parser.add_argument("--candidate_orientation_remap_label", type=str, default="identity")
     parser.add_argument("--candidate_post_rot_xyz_deg", type=float, nargs=3, default=[0.0, 0.0, 0.0])
+    parser.add_argument("--candidate_input_frame_contract", choices=["auto", "anygrasp_raw", "robot_replay"], default="auto", help="Semantic frame declared by the candidate source before --candidate_orientation_remap_label. Set this explicitly when converting a robot_replay preview back to the AnyGrasp/Piper +X-forward TCP frame.")
+    parser.add_argument("--candidate_frame_contract", choices=["legacy_unchecked", "anygrasp_raw", "robot_replay"], default="legacy_unchecked", help="Explicit semantic contract for candidate local axes. robot_replay requires local +Z forward, local +X top/normal, local-Z target offset/pregrasp, and a local-Z-forward debug actor. anygrasp_raw requires local +X forward, local +Z top/normal, local-X target offset/pregrasp, and a local-X-forward actor. legacy_unchecked preserves historical commands without validation.")
     parser.add_argument("--candidate_keep_camera_up", type=int, default=0, help="If 1, keep the gripper/camera top side facing upward overall while preserving the original grasp direction. The planner only resolves the redundant 180-degree roll about --candidate_camera_forward_axis.")
-    parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. Piper AnyGrasp uses red local +X as forward; local_z is retained only for legacy/remapped candidate sets that explicitly define blue +Z as forward.")
+    parser.add_argument("--candidate_camera_forward_axis", choices=["local_x", "local_z"], default="local_x", help="Local gripper forward/approach axis preserved by --candidate_keep_camera_up. Use local_x for anygrasp_raw and local_z for robot_replay canonical candidates.")
     parser.add_argument("--candidate_camera_top_axis", choices=["x", "y", "z"], default="z", help="Local gripper axis used by the camera/top preference when --candidate_keep_camera_up=1.")
-    parser.add_argument("--candidate_camera_top_axis_sign", type=int, choices=[-1, 1], default=1, help="Signed direction of --candidate_camera_top_axis. For the verified Piper AnyGrasp contract use forward=local_x, top=z, sign=-1: preserve red +X forward and prefer camera-back/plane-normal -blue upward. Do not infer orientation from the camera translation vector.")
-    parser.add_argument("--candidate_target_local_x_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +X before planning/visualization. In the default identity AnyGrasp frame this is the AnyGrasp finger-depth axis, which is not the same convention as direct hand replay's local +Z approach axis.")
-    parser.add_argument("--candidate_target_local_z_offset_m", type=float, default=0.0, help="Additional translation applied to each AnyGrasp world target along target local +Z before planning/visualization. Use this with --candidate_orientation_remap_label swap_red_blue to reproduce the direct replay convention where blue local +Z is the approach/forward axis.")
+    parser.add_argument("--candidate_camera_top_axis_sign", type=int, choices=[-1, 1], default=1, help="Signed direction of --candidate_camera_top_axis. For the verified 0515 robot_replay chain use forward=local_z, top=x, sign=-1, so -canonical X = raw AnyGrasp +Z faces world up. The equivalent anygrasp_raw convention is forward=local_x, top=z, sign=+1.")
+    parser.add_argument("--candidate_target_local_x_offset_m", type=float, default=0.0, help="Additional target translation along local +X. This is the physical approach offset only under the anygrasp_raw contract; robot_replay must leave it zero.")
+    parser.add_argument("--candidate_target_local_z_offset_m", type=float, default=0.0, help="Additional target translation along local +Z. This is the physical approach offset under the robot_replay canonical contract; anygrasp_raw must leave it zero.")
     parser.add_argument("--manual_candidate", type=str, nargs=3, action="append", default=[], metavar=("FRAME", "ARM", "CANDIDATE_IDX"), help="Optional manual candidate override, e.g. --manual_candidate 1 left 5. Partial overrides only reorder debug display; full two-frame overrides for one arm drive selection directly.")
     parser.add_argument("--object_mesh_override", action="append", default=[], help="Repeatable mesh override in the form NAME=/abs/path/to/mesh.obj, e.g. cup=/.../blue_cup.obj")
     parser.add_argument("--robot_config", type=Path, default=R1_CONFIG)
@@ -1342,6 +1344,101 @@ def camera_roll_flip_180_matrix(forward_axis: str) -> np.ndarray:
     if str(forward_axis) == "local_z":
         return np.diag([-1.0, -1.0, 1.0]).astype(np.float64)
     raise ValueError(f"Unsupported candidate camera forward axis: {forward_axis}")
+
+
+def validate_candidate_frame_contract(args: argparse.Namespace) -> None:
+    """Reject mixed candidate-axis semantics before any output is created."""
+    contract = str(args.candidate_frame_contract)
+    if contract == "legacy_unchecked":
+        return
+    if contract == "robot_replay":
+        expected = {
+            "candidate_camera_forward_axis": "local_z",
+            "candidate_camera_top_axis": "x",
+            "approach_axis": "local_z",
+            "debug_gripper_actor_forward_axis": "local_z",
+        }
+        forbidden_offset_name = "candidate_target_local_x_offset_m"
+    elif contract == "anygrasp_raw":
+        expected = {
+            "candidate_camera_forward_axis": "local_x",
+            "candidate_camera_top_axis": "z",
+            "approach_axis": "local_x",
+            "debug_gripper_actor_forward_axis": "local_x",
+        }
+        forbidden_offset_name = "candidate_target_local_z_offset_m"
+    else:
+        raise ValueError(f"Unsupported candidate_frame_contract: {contract}")
+
+    mismatches = [
+        f"{name}={getattr(args, name)!r} (expected {value!r})"
+        for name, value in expected.items()
+        if str(getattr(args, name)) != value
+    ]
+    forbidden_offset = float(getattr(args, forbidden_offset_name))
+    if abs(forbidden_offset) > 1e-12:
+        mismatches.append(f"{forbidden_offset_name}={forbidden_offset} (expected 0.0)")
+    if mismatches:
+        raise ValueError(
+            f"candidate_frame_contract={contract} is inconsistent: " + "; ".join(mismatches)
+        )
+
+
+def validate_preview_candidate_frame_contract(
+    args: argparse.Namespace,
+    preview_summary: Dict[str, Any],
+) -> None:
+    """Verify source contract and the fixed source-to-planner frame conversion."""
+    output_contract = str(args.candidate_frame_contract)
+    if output_contract == "legacy_unchecked":
+        return
+    preview_contract = preview_summary.get("candidate_frame_mode")
+    if preview_contract is None:
+        raise ValueError(
+            "reuse_preview_summary_json does not declare candidate_frame_mode; "
+            f"cannot verify candidate_frame_contract={output_contract}"
+        )
+    requested_input = str(args.candidate_input_frame_contract)
+    input_contract = str(preview_contract) if requested_input == "auto" else requested_input
+    if str(preview_contract) != input_contract:
+        raise ValueError(
+            "candidate input frame contract mismatch: "
+            f"requested_input={input_contract}, preview={preview_contract}"
+        )
+
+    remap = np.asarray(args.candidate_orientation_remap_matrix, dtype=np.float64).reshape(3, 3)
+    identity = np.eye(3, dtype=np.float64)
+    robot_replay_to_anygrasp_raw = np.array(
+        [[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]],
+        dtype=np.float64,
+    )
+    anygrasp_raw_to_robot_replay = robot_replay_to_anygrasp_raw.T
+    expected_remaps = {
+        ("anygrasp_raw", "anygrasp_raw"): identity,
+        ("robot_replay", "robot_replay"): identity,
+        ("robot_replay", "anygrasp_raw"): robot_replay_to_anygrasp_raw,
+        ("anygrasp_raw", "robot_replay"): anygrasp_raw_to_robot_replay,
+    }
+    expected_remap = expected_remaps.get((input_contract, output_contract))
+    if expected_remap is None or not np.allclose(remap, expected_remap, atol=1e-12):
+        raise ValueError(
+            "candidate source-to-planner remap mismatch: "
+            f"input={input_contract}, output={output_contract}, "
+            f"remap={args.candidate_orientation_remap_label}"
+        )
+    if not np.allclose(np.asarray(args.candidate_post_rot_matrix, dtype=np.float64), identity, atol=1e-12):
+        raise ValueError(
+            "explicit candidate frame contracts require candidate_post_rot_xyz_deg=[0,0,0]"
+        )
+    if (
+        input_contract == "robot_replay"
+        and output_contract == "anygrasp_raw"
+        and bool(args.piper_urdfik_apply_curobo_to_sapien_link_rotation)
+    ):
+        raise ValueError(
+            "double frame compensation: robot_replay was already remapped to anygrasp_raw, "
+            "so piper_urdfik_apply_curobo_to_sapien_link_rotation must be 0"
+        )
 
 
 def forward_axis_change_deg(
@@ -5144,6 +5241,8 @@ def export_source_preview_compare(
     metadata: Dict[str, object] = {
         "reuse_preview_summary_json": str(args.reuse_preview_summary_json),
         "reuse_preview_candidate_group": str(args.reuse_preview_candidate_group),
+        "candidate_input_frame_contract": str(args.candidate_input_frame_contract),
+        "candidate_frame_contract": str(args.candidate_frame_contract),
         "reuse_preview_top_rank": int(args.reuse_preview_top_rank),
         "candidate_target_local_x_offset_m": float(args.candidate_target_local_x_offset_m),
         "candidate_target_local_z_offset_m": float(args.candidate_target_local_z_offset_m),
@@ -5328,6 +5427,7 @@ def generate_debug_preview(
 
 def main() -> None:
     args = parse_args()
+    validate_candidate_frame_contract(args)
     args.anygrasp_dir = args.anygrasp_dir.resolve()
     args.replay_dir = args.replay_dir.resolve()
     args.hand_npz = args.hand_npz.resolve()
@@ -5389,6 +5489,7 @@ def main() -> None:
     if args.reuse_preview_summary_json is not None:
         with args.reuse_preview_summary_json.open("r", encoding="utf-8") as f:
             preview_summary_for_resolution = json.load(f)
+        validate_preview_candidate_frame_contract(args, preview_summary_for_resolution)
         requested_keyframes_used, keyframes, resolved_keyframe_pairs, resolved_relative_frame = resolve_frames_from_preview_summary(
             preview_summary=preview_summary_for_resolution,
             frame_mode=str(args.reuse_preview_frame_mode),
@@ -7108,6 +7209,8 @@ def main() -> None:
         "reach_rot_tol_deg": float(args.reach_rot_tol_deg),
         "candidate_keep_camera_up": int(args.candidate_keep_camera_up),
         "candidate_camera_forward_axis": str(args.candidate_camera_forward_axis),
+        "candidate_input_frame_contract": str(args.candidate_input_frame_contract),
+        "candidate_frame_contract": str(args.candidate_frame_contract),
         "candidate_camera_top_axis": str(args.candidate_camera_top_axis),
         "candidate_camera_top_axis_sign": int(args.candidate_camera_top_axis_sign),
         "candidate_target_local_x_offset_m": float(args.candidate_target_local_x_offset_m),

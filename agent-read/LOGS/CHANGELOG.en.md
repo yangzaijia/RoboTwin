@@ -3387,3 +3387,12 @@ Validation: local/remote `py_compile`, `bash -n`, invalid solution-selection enu
 - Frame-78 right `#5` grows from `4.68 cm` raw-center distance to the object anchor to `9.62 cm` for the current target. Successful V6 execution therefore does not prove the candidate-coordinate chain. Neither V6/OursV2 video nor planner logic was modified in this change.
 
 Validation: `py_compile`, dry-run, both 20-candidate frame inputs, manifest JSON, dimensions/hashes of both 1920x1152 contact sheets, and original-resolution visual QA passed. Output is under `paper_qualitative_assets/.../candidate_audit_v6/`.
+
+## 2026-07-20 (V7 candidate frame contracts and single link6 mapping)
+
+- The planner/wrapper now expose `candidate_input_frame_contract` and fail fast on preview declarations, source-to-planner remaps, local axes, offsets, approach, and debug-actor inconsistencies. The historical `legacy_unchecked` default remains compatible.
+- Added a V7 six-panel audit exporter. Raw poses use a local-X actor; canonical and target poses use a local-Z actor. The manifest records all three physical-axis mapping errors and object-anchor distances.
+- `pick_diverse_bottles/id0` completes pregrasp/grasp/action with K1 `L16/R9` and K2 `L19/R16`. All mapped-axis errors are 0 deg. The four-view output is H.264/yuv420p, 1280x1036, 30 fps, 456 frames/15.2 s.
+- Diagnosed and rejected a second candidate-side `Ry(-90 deg)`: it reaches position within 2--3 mm but leaves 52--56 deg rotation error. V6 and OursV2 were not overwritten.
+
+Validation: `py_compile`, `bash -n`, 12 direct regression tests, wrapper dry-run, one-episode execution, original-resolution contact-sheet visual QA, compositor dry-run, ffprobe, and an 8-second frame visual check all passed.

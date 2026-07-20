@@ -140,3 +140,10 @@
 - Inspect per-joint target/current/delta in `[joint-settle-miss]`. A target exactly equal to a URDF upper/lower bound means the candidate lies on a joint limit; the frame convention is not necessarily wrong.
 - For `pick_diverse_bottles/id0`, raw K2-left Top-score `#0` sets J5 to its `+1.2217 rad` upper limit and misses action by about `57 mm`. The next mount-up/IK/joint-limit-feasible candidate `#3` in the same ranking reduces the miss to `3.0 mm`.
 - Do not hide this failure by relaxing reach tolerance. Any replacement must be labeled constrained/feasible in the output.
+
+## Converting robot_replay to Piper +X still leaves a fixed 52--56 deg rotation error
+
+- Symptom: position is within 2--3 mm, but both arms retain about 52--56 deg rotation error.
+- Cause: the candidate side applies an explicit robot_replay-to-raw/Piper `Ry(-90 deg)` while `piper_apply_curobo_to_sapien_link_rotation=1` applies the corresponding link6 adapter again at IK, causing double compensation.
+- Fix: keep `candidate_input_frame_contract=robot_replay`, `candidate_frame_contract=robot_replay`, and `candidate_orientation_remap_label=identity`; use local-Z forward/top-X/sign -1 and retain exactly one IK link adapter.
+- Check: both contracts must be recorded as robot_replay in `plan_summary.json`, all mapped-axis errors in the six-panel audit must be 0 deg, and rotation tolerance must not be relaxed to hide double compensation.

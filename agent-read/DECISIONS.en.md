@@ -69,3 +69,10 @@
 - Formal qualitative replays use stage-endpoint IK plus joint-space interpolation, not Cartesian waypoint IK with an approximately 180-degree relaxed rotation threshold.
 - A selected pose must pass mount-up, IK, and physical joint-limit checks. If raw top-1 lies on a hard limit, the next feasible candidate in the same strategy ranking may be used only when the title, config, and manifest label the result constrained/feasible.
 - V5 writes to an isolated output and never overwrites V4, OursV2, or legacy strategy results. With object collisions disabled, V5 is qualitative retargeting evidence, not a physical grasp-success benchmark.
+
+## 2026-07-20: candidate coordinates permit exactly one frame adapter
+
+- The preview source and planner local-axis contract must be declared separately. Non-legacy commands may not infer a frame from a path name or actor color.
+- A robot_replay candidate remains canonical `+Z` forward in candidate space. The Curobo-to-SAPIEN link6 `Ry(-90 deg)` is applied once, only at the IK boundary.
+- Raw/canonical comparison images must use the correct actor for each frame and verify physical equivalence through silhouette overlap and mapped-axis errors; a basis change must not be drawn as a physical rotation.
+- Historical V6 remains untouched. V7 uses an isolated output, and collision-disabled execution is coordinate-chain/reachability evidence only.

@@ -69,3 +69,10 @@
 - 正式定性 replay 使用 stage endpoint IK + 关节空间插值，不再用最大旋转放宽到约 180° 的逐 Cartesian waypoint IK。
 - 选中姿态必须经过 mount-up、IK 与实际关节限位三项检查。Raw top-1 若落在硬限位，可选择同一策略排序中下一项 feasible candidate，但必须在标题、config 和 manifest 中明确标为 constrained/feasible。
 - V5 写入独立输出；V4、OursV2 和旧策略结果不覆盖。关闭物体碰撞的 V5 只能表述为 qualitative retargeting，不作为物理抓取成功率。
+
+## 2026-07-20：候选坐标只允许单次 frame adapter
+
+- preview 来源和 planner 局部轴必须分别声明；非 legacy 命令不得依靠路径名或 actor 颜色猜坐标系。
+- robot_replay candidate 在候选层保持 canonical `+Z` forward；Curobo→SAPIEN link6 `Ry(-90°)` 只在 IK 边界应用一次。
+- raw/canonical 对比图必须用各自正确的 gripper actor 绘制，以物理轮廓和映射轴误差验证等价；不得把换基画成物理旋转。
+- 历史 V6 保留但不修改；V7 结果写入独立目录，且关闭碰撞的执行只作为坐标链/可达性验证。

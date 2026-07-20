@@ -1,5 +1,16 @@
 # Piper Gripper Orientation Rules
 
+## 2026-07-20 V7 authoritative chain (supersedes conflicting V4--V6 interpretations)
+
+- AnyGrasp raw: red `+X` approach, green `+Y` opening, blue `+Z` plane normal.
+- robot_replay canonical: blue `+Z = raw +X` approach, green `+Y = raw +Y` opening, and `-red -X = raw +Z` plane normal.
+- Raw and canonical are two bases for the same physical gripper, not a physical 90-degree gripper rotation. Their silhouettes must overlap when rendered with their respective `local_x` and `local_z` actors.
+- Piper IK already applies one link6 `Ry(-90 deg)` adapter when `piper_apply_curobo_to_sapien_link_rotation=1`; the candidate rotation remains robot_replay and must not receive the same matrix again.
+- The 0515 camera-back-up rule is `-canonical X = raw +Z` toward world up, i.e. `forward=local_z, top=x, sign=-1`. The 5 cm target offset and 12 cm pregrasp both follow canonical local Z.
+- V6's `robot_replay rotation + local-X forward` is a historical error. Successful execution only proves that the incorrect target was reachable.
+
+The V7 audit measures `0 deg` for all three mappings: `raw +X↔canonical +Z`, `raw +Y↔canonical +Y`, and `raw +Z↔-canonical X`. See `COMMANDS/candidate_frame_contract_v7.en.md`.
+
 ## Current Takeaway
 
 For the current `pnp_star_pear_hamer_output_v2/hand_detections_0.npz` and calibrated `PiperPika` scene, the RGB axes in the debug boards can be read as:
