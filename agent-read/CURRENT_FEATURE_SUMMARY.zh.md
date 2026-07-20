@@ -11,6 +11,7 @@
 - `robot_replay` 输入以 canonical `+Z` 为 approach，经 `swap_red_blue_keep_green` 转为 Piper 物理 `+X` approach 后再进入原有 Piper URDFIK；IK 侧继续保留 global adapter 与 Curobo→SAPIEN link6 adapter。这里不存在独立的“canonical IK”求解器。
 - 正确物理轴对应为 `raw +X = canonical +Z`、`raw +Y = canonical +Y`、`raw +Z = -canonical +X`。`pick_diverse_bottles/id0` 的三组映射误差均为 `0°`；camera-back-up 使用 `-canonical X = raw +Z` 朝 world up。
 - V7 六联图的 raw/canonical 朝向对应仍然正确；V7 四视角执行视频的 planner target 坐标链错误，仅保留作历史反例。当前 V8 固定原始策略候选，不做 IK-feasible fallback，并以严格 30° reach 门限保留真实失败。
+- V8 `pick_diverse_bottles/id0` 已按原始候选实跑：Orientation/Fused 均为 K1 `L16/R5`、K2 `L14/R16`，左 pregrasp 旋转 `35.44°` miss，但 grasp/action 完成；Top-score 为 K1 `L0/R3`、K2 `L0/R1`，右 grasp `33.22°` 后在 close 前安全停止。原速 2×2 视频与 manifest 位于 `paper_qualitative_assets/.../id0/v8_physical_axes_raw_strategy_videos/`。
 - V6 候选几何审计推翻了“V6 已统一 AnyGrasp 轴语义”的结论。输入候选仍为 `candidate_frame_mode=robot_replay`：canonical 蓝 `+Z = raw AnyGrasp +X approach`；V6 却把同一旋转按红 `+X = forward` 使用。选中候选的 V6 stored rotation 与 `anygrasp_raw` 固定相差 `90°`。
 - V6 的 `-0.05 m` candidate offset 沿 stored red `+X`，而不是沿 raw AnyGrasp approach。`pick_diverse_bottles/id0/frame78/right #5` 从 raw center 到 object anchor 的 `4.68 cm` 增为 current target 的 `9.62 cm`。因此 V6 视频只能证明该错误目标可被 IK/关节执行，不能证明候选坐标链正确。
 - 新增只读导出器 `code_painting/export_v6_candidate_geometry_audit.py`。它为 frame 38/78 各生成 2×3 图：raw dense candidates、选中 raw poses、V6 stored remap、当前 `-5 cm` target、object-anchor 距离和 raw-vs-target overlay；不调用 IK、不覆盖旧素材。

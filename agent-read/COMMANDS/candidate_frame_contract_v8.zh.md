@@ -57,3 +57,12 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
   --disable_execution_collisions --target_axes_only \
   --piper_calibration_bundle /home/zaijia001/ssd/RoboTwin/calibration_bundle_piper_new_table_0515.json
 ```
+
+## 已生成的单集结果
+
+- Orientation：`paper_v8_physical_axes_orientation_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- Fused：`paper_v8_physical_axes_fused_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- Top-score：`paper_v8_physical_axes_topscore_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- 2×2：`/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v8_physical_axes_raw_strategy_videos/candidate_retarget_grid_2x2_physical_axes_raw_v8.mp4`
+
+2×2 保持原始播放速度；15.2 秒的 Orientation/Fused 和 10.2 秒的 Top-score 冻结末帧到 21.4 秒，不拉伸失败过程。OursV2 格明确标为历史 `180°` reach tolerance，不能作为严格姿态 IK 成功。

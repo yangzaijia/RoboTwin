@@ -3402,4 +3402,4 @@ Validation: `py_compile`、`bash -n`、12 项直接回归测试、wrapper dry-ru
 - 新增项目级双语 TODO：IK-feasible 候选重排延后；当前原始策略比较不替换候选、严格保留失败。
 - 更正双语当前摘要、坐标规则、决策、故障说明与命令页；V7 执行命令标为历史错误，旧文件和产物不删除。
 
-Validation: `RoboTwin_bw` 下 `py_compile`、12 项直接回归测试、wrapper `bash -n` 和三策略 dry-run 均通过；单 episode 三策略执行待运行。
+Validation: `RoboTwin_bw` 下 `py_compile`、12 项直接回归测试、wrapper `bash -n`、三策略 dry-run 和单 episode 三策略执行均完成。Orientation/Fused 各保留 1 条严格 pregrasp failure；Top-score 保留 5 条 failure 并在 close 前停止。四源与 2×2 均完整解码；成品为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，6/11/16 秒视觉 QA 通过。两次 manifest QA 首先误用 `output.probe.video`、随后误用 `codec_name`，均为只读断言脚本键名错误；改用真实 `output.probe.codec` schema 后通过，未改写视频。

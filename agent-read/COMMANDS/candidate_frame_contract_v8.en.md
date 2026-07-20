@@ -57,3 +57,12 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
   --disable_execution_collisions --target_axes_only \
   --piper_calibration_bundle /home/zaijia001/ssd/RoboTwin/calibration_bundle_piper_new_table_0515.json
 ```
+
+## Generated one-episode results
+
+- Orientation: `paper_v8_physical_axes_orientation_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- Fused: `paper_v8_physical_axes_fused_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- Top-score: `paper_v8_physical_axes_topscore_raw_20260720/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4`
+- 2x2: `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v8_physical_axes_raw_strategy_videos/candidate_retarget_grid_2x2_physical_axes_raw_v8.mp4`
+
+The 2x2 preserves native speed. Orientation/Fused end at 15.2 s and Top-score at 10.2 s, then freeze to the 21.4 s common timeline rather than stretching failed execution. The OursV2 tile is explicitly labeled as a historical 180-degree reach-tolerance result, not strict orientation-IK success.
