@@ -3403,3 +3403,11 @@ Validation: `py_compile`、`bash -n`、12 项直接回归测试、wrapper dry-ru
 - 更正双语当前摘要、坐标规则、决策、故障说明与命令页；V7 执行命令标为历史错误，旧文件和产物不删除。
 
 Validation: `RoboTwin_bw` 下 `py_compile`、12 项直接回归测试、wrapper `bash -n`、三策略 dry-run 和单 episode 三策略执行均完成。Orientation/Fused 各保留 1 条严格 pregrasp failure；Top-score 保留 5 条 failure 并在 close 前停止。四源与 2×2 均完整解码；成品为 H.264/yuv420p、1280×796、30 fps、642 帧/21.4 s，6/11/16 秒视觉 QA 通过。两次 manifest QA 首先误用 `output.probe.video`、随后误用 `codec_name`，均为只读断言脚本键名错误；改用真实 `output.probe.codec` schema 后通过，未改写视频。
+
+## 2026-07-20（V8 物理轴原始候选 6×2 批处理）
+
+- 新增事件驱动批处理，固定论文素材中的 6 tasks × 2 episodes；第一阶段重建独立 `approach_axis` preview，避免把旧 SO(3) 排序混入 V8。
+- 每集顺序执行 Orientation、Fused、Top-score，保持 V8 frame contract、30°严格门限和无 fallback；随后生成原速 2×2 与 `execution_status_v8.json`。
+- 批次自动写 36 条 planner TSV、episode manifest 和 `DONE` marker 后退出；不需要 agent 持续轮询。
+
+Validation: Python `py_compile`、shell `bash -n`、12 集 AnyGrasp/D435 replay/HaMeR NPZ/标注/OursV2 输入审计全部通过；完整 dry-run 返回 0，严格生成 6 个 preview、36 个 planner、12 个 compose 命令，且未创建正式输出。两个新脚本被通用 `code_painting/*` ignore，提交时使用 targeted force-add，不改变全局 ignore。

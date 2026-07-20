@@ -3405,3 +3405,11 @@ Validation: `py_compile`, `bash -n`, 12 direct regression tests, wrapper dry-run
 - Corrected the bilingual current summary, frame rules, decisions, troubleshooting, and command pages. Marked V7 execution commands historical without deleting old files or outputs.
 
 Validation: `py_compile`, 12 direct regressions, wrapper `bash -n`, all three strategy dry-runs, and one-episode execution complete under `RoboTwin_bw`. Orientation/Fused each preserve one strict pregrasp failure; Top-score preserves five failures and stops before close. All four sources and the 2x2 fully decode. The deliverable is H.264/yuv420p, 1280x796, 30 fps, 642 frames/21.4 s, with visual QA at 6/11/16 s. Two manifest QA attempts first used `output.probe.video` and then `codec_name`; both were read-only assertion-schema mistakes. Validation passes with the actual `output.probe.codec` schema and no video was rewritten.
+
+## 2026-07-20 (V8 physical-axis raw-candidate 6x2 batch)
+
+- Added an event-driven batch over the fixed paper-material 6 tasks x 2 episodes. Phase one rebuilds isolated `approach_axis` previews so V8 does not mix in historical SO(3) ranking.
+- Each episode sequentially executes Orientation, Fused, and Top-score with the V8 frame contract, strict 30-degree gate, and no fallback, then creates a native-speed 2x2 and `execution_status_v8.json`.
+- The batch writes a 36-invocation planner TSV, episode manifest, and `DONE` marker before exiting; no continuous agent polling is required.
+
+Validation: Python `py_compile`, shell `bash -n`, and all 12 AnyGrasp/D435 replay/HaMeR NPZ/annotation/OursV2 input checks pass. The full dry-run returns zero with exactly 6 preview, 36 planner, and 12 compose commands and creates no formal output. The two new scripts match the general `code_painting/*` ignore rule, so they are included with a targeted force-add without changing global ignore policy.

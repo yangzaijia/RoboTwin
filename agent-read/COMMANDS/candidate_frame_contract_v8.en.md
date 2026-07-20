@@ -66,3 +66,21 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
 - 2x2: `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v8_physical_axes_raw_strategy_videos/candidate_retarget_grid_2x2_physical_axes_raw_v8.mp4`
 
 The 2x2 preserves native speed. Orientation/Fused end at 15.2 s and Top-score at 10.2 s, then freeze to the 21.4 s common timeline rather than stretching failed execution. The OursV2 tile is explicitly labeled as a historical 180-degree reach-tolerance result, not strict orientation-IK success.
+
+## 6 tasks x 2 episodes tmux batch
+
+The batch first generates isolated `approach_axis` previews for the fixed 12 episodes, executes raw Orientation, Fused, and Top-score candidates, then composes a native-speed 2x2 per episode. A planning failure is recorded and the batch continues without candidate fallback.
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2 --dry-run
+```
+
+Background launch template:
+
+```bash
+tmux new-session -d -s v8_raw_axes_6x2_20260720 \
+  "cd /home/zaijia001/ssd/RoboTwin && bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2"
+```
+
+The batch root is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/`. `_run/DONE` marks automatic completion; `_run/planner_status.tsv` records 36 planner invocations; each `<TASK>/id<ID>/execution_status_v8.json` records selected candidates, stage errors, and video paths.

@@ -66,3 +66,21 @@ bash code_painting/run_plan_anygrasp_keyframes_piper_d435_six_tasks.sh \
 - 2×2：`/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/keyframe_candidates/pick_diverse_bottles/id0/v8_physical_axes_raw_strategy_videos/candidate_retarget_grid_2x2_physical_axes_raw_v8.mp4`
 
 2×2 保持原始播放速度；15.2 秒的 Orientation/Fused 和 10.2 秒的 Top-score 冻结末帧到 21.4 秒，不拉伸失败过程。OursV2 格明确标为历史 `180°` reach tolerance，不能作为严格姿态 IK 成功。
+
+## 6 tasks × 2 episodes tmux 批处理
+
+批处理先为固定 12 集生成独立的 `approach_axis` preview，再依次执行 Orientation、Fused、Top-score 原始候选，最后为每集生成原速 2×2。任一规划失败只写入状态并继续，不做候选 fallback。
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2 --dry-run
+```
+
+后台启动模板：
+
+```bash
+tmux new-session -d -s v8_raw_axes_6x2_20260720 \
+  "cd /home/zaijia001/ssd/RoboTwin && bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2"
+```
+
+批次根目录：`/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/`。`_run/DONE` 表示脚本自动完成；`_run/planner_status.tsv` 记录 36 条规划命令状态；每个 `<TASK>/id<ID>/execution_status_v8.json` 记录候选、阶段误差和视频路径。
