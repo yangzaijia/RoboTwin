@@ -7,10 +7,10 @@
 
 ## Added in this change
 
-- V7 separates the candidate-source frame from the planner frame with two explicit contracts: `candidate_input_frame_contract` describes the preview source, while `candidate_frame_contract` controls the local axes used by camera-up, target offsets, pregrasp, and the debug actor. Non-legacy mode rejects undeclared sources, invalid remaps, and mixed local-X/local-Z settings before producing results.
-- A `robot_replay` source remains canonical `+Z` approach. Piper IK applies the existing Curobo-to-SAPIEN link6 `Ry(-90 deg)` adapter exactly once. Applying the same `Ry(-90 deg)` again on the candidate side double-compensates and was measured to leave about `52--56 deg` rotation error.
+- V8 corrects V7's conflation of two independent transforms: candidate-side `robot_replay -> anygrasp_raw/Piper physical TCP` is a task-target basis change, while the IK-side Curobo-link6 -> SAPIEN-link6 adapter maps between the solver and renderer URDF frames. The correct chain applies both, exactly once each.
+- A `robot_replay` input uses canonical `+Z` approach. `swap_red_blue_keep_green` converts it to the Piper physical `+X` approach before the existing Piper URDFIK; the global and Curobo-to-SAPIEN link6 adapters remain enabled. There is no separate "canonical IK" solver.
 - The physical-axis equivalence is `raw +X = canonical +Z`, `raw +Y = canonical +Y`, and `raw +Z = -canonical +X`. All three mapped-axis errors are `0 deg` on `pick_diverse_bottles/id0`; camera-back-up uses `-canonical X = raw +Z` toward world up.
-- The V7 single-episode validation uses K1 `L16/R9` and K2 `L19/R16`; pregrasp, grasp, and action all reach. Its six-panel audit and four-view video are under `paper_qualitative_assets/.../id0/v7_single_mapping_consistent/`, with headers outside the 480 px video content.
+- The V7 six-panel raw/canonical orientation correspondence remains valid, but the V7 four-view execution video used the wrong planner-target frame chain and is retained only as historical evidence. V8 fixes raw strategy candidates, performs no IK-feasible fallback, and preserves real failures under a strict 30-degree reach gate.
 - The V6 candidate-geometry audit overturns the claim that V6 unified the AnyGrasp axis semantics. Input candidates remain `candidate_frame_mode=robot_replay`, where canonical blue `+Z = raw AnyGrasp +X approach`, but V6 consumes that same rotation as red `+X = forward`. Every selected V6 stored rotation is exactly `90 deg` from `anygrasp_raw`.
 - V6 applies its `-0.05 m` candidate offset along stored red `+X`, not along raw AnyGrasp approach. For `pick_diverse_bottles/id0/frame78/right #5`, raw-center distance to the object anchor is `4.68 cm`, while the current target is `9.62 cm`. The V6 video therefore proves only that IK/joint execution can reach the incorrect target, not that the candidate-coordinate chain is correct.
 - Added read-only exporter `code_painting/export_v6_candidate_geometry_audit.py`. For frames 38/78 it produces 2x3 boards containing raw dense candidates, selected raw poses, V6 stored remap, current `-5 cm` target, object-anchor distances, and a raw-vs-target overlay. It never invokes IK and never overwrites historical assets.
@@ -36,7 +36,7 @@
 4. `PIPER_CANONICAL_TCP_V1.en.md`
 5. `COMMANDS/piper_canonical_tcp_v1.en.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.en.md`
-7. `COMMANDS/candidate_frame_contract_v7.en.md`
+7. `COMMANDS/candidate_frame_contract_v8.en.md`
 8. `COMMANDS/piper_v6_candidate_geometry_audit.en.md`
 9. `COMMANDS/candidate_camera_mount_up_v6.en.md` (historical V6 reproduction with a known axis-semantic mix)
 

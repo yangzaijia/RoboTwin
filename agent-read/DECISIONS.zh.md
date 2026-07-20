@@ -76,3 +76,9 @@
 - robot_replay candidate 在候选层保持 canonical `+Z` forward；Curobo→SAPIEN link6 `Ry(-90°)` 只在 IK 边界应用一次。
 - raw/canonical 对比图必须用各自正确的 gripper actor 绘制，以物理轮廓和映射轴误差验证等价；不得把换基画成物理旋转。
 - 历史 V6 保留但不修改；V7 结果写入独立目录，且关闭碰撞的执行只作为坐标链/可达性验证。
+
+## 2026-07-20：V8 区分候选换基与 link6 模型适配
+
+- 撤销“candidate remap 与 Curobo→SAPIEN link6 adapter 是重复补偿”的 V7 结论；前者定义任务目标的 Piper 物理 TCP 轴，后者协调两套 URDF link6 模型帧。
+- 主链路固定为 `robot_replay → anygrasp_raw/Piper +X` 后进入同一 Piper URDFIK，并保留 global/link6 adapters。
+- 当前比较只执行各策略原始 top 选择；IK-feasible 重排、替代候选和自动 fallback 延后。不可达候选应保留失败和短视频，不能通过放宽 180° 姿态容差伪装成功。

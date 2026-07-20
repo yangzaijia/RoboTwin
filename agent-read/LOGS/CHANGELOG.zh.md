@@ -3394,3 +3394,12 @@ Validation: `py_compile`、dry-run、两帧 20-candidate 输入、manifest JSON�
 - 诊断并排除候选侧第二次 `Ry(-90°)`：该错误版本位置可到 2--3 mm，但旋转残差为 52--56°。V6/OursV2 未覆盖。
 
 Validation: `py_compile`、`bash -n`、12 项直接回归测试、wrapper dry-run、单 episode 实跑、contact-sheet 原分辨率视觉 QA、合成 dry-run、ffprobe 与 8 秒抽帧 QA 均通过。
+
+## 2026-07-20（V8 修正候选换基与 link6 adapter 边界）
+
+- 修正 V7 将 candidate remap 与 Curobo→SAPIEN link6 adapter 误判为重复补偿的问题；删除错误拒绝条件，保留来源/目标 frame 与固定 remap 的 fail-fast 检查。
+- 回归测试改为确认 `robot_replay → anygrasp_raw` 与 link6 adapter 可以并且必须独立共存。
+- 新增项目级双语 TODO：IK-feasible 候选重排延后；当前原始策略比较不替换候选、严格保留失败。
+- 更正双语当前摘要、坐标规则、决策、故障说明与命令页；V7 执行命令标为历史错误，旧文件和产物不删除。
+
+Validation: `RoboTwin_bw` 下 `py_compile`、12 项直接回归测试、wrapper `bash -n` 和三策略 dry-run 均通过；单 episode 三策略执行待运行。

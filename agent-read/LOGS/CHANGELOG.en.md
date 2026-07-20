@@ -3396,3 +3396,12 @@ Validation: `py_compile`, dry-run, both 20-candidate frame inputs, manifest JSON
 - Diagnosed and rejected a second candidate-side `Ry(-90 deg)`: it reaches position within 2--3 mm but leaves 52--56 deg rotation error. V6 and OursV2 were not overwritten.
 
 Validation: `py_compile`, `bash -n`, 12 direct regression tests, wrapper dry-run, one-episode execution, original-resolution contact-sheet visual QA, compositor dry-run, ffprobe, and an 8-second frame visual check all passed.
+
+## 2026-07-20 (V8 corrects the candidate-remap/link6-adapter boundary)
+
+- Corrected V7's conflation of candidate remapping with the Curobo-to-SAPIEN link6 adapter. Removed the invalid rejection while retaining fail-fast source/target-frame and fixed-remap checks.
+- Changed the regression to require `robot_replay -> anygrasp_raw` conversion and the link6 adapter to coexist independently.
+- Added a bilingual project TODO deferring IK-feasible candidate reranking. Current raw-strategy comparisons never replace candidates and preserve failures strictly.
+- Corrected the bilingual current summary, frame rules, decisions, troubleshooting, and command pages. Marked V7 execution commands historical without deleting old files or outputs.
+
+Validation: `py_compile`, 12 direct regressions, wrapper `bash -n`, and all three strategy dry-runs pass under `RoboTwin_bw`; one-episode execution of all three strategies remains pending.

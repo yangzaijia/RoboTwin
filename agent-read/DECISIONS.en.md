@@ -76,3 +76,9 @@
 - A robot_replay candidate remains canonical `+Z` forward in candidate space. The Curobo-to-SAPIEN link6 `Ry(-90 deg)` is applied once, only at the IK boundary.
 - Raw/canonical comparison images must use the correct actor for each frame and verify physical equivalence through silhouette overlap and mapped-axis errors; a basis change must not be drawn as a physical rotation.
 - Historical V6 remains untouched. V7 uses an isolated output, and collision-disabled execution is coordinate-chain/reachability evidence only.
+
+## 2026-07-20: V8 separates candidate basis conversion from the link6 model adapter
+
+- Withdraw the V7 claim that candidate remapping and the Curobo-to-SAPIEN link6 adapter are duplicate compensation. The former defines the physical Piper TCP axes for a task target; the latter reconciles two URDF link6 model frames.
+- The main chain is `robot_replay -> anygrasp_raw/Piper +X`, followed by the same Piper URDFIK with global/link6 adapters enabled.
+- The current comparison executes each strategy's raw top selection only. IK-feasible reranking, replacement candidates, and automatic fallback are deferred. Preserve unreachable failures and short videos; never manufacture success with a 180-degree orientation tolerance.

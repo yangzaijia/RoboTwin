@@ -285,7 +285,7 @@ def test_robot_replay_to_anygrasp_piper_tcp_rejects_identity_remap() -> None:
         raise AssertionError("robot_replay source must not enter a +X-forward Piper TCP unchanged")
 
 
-def test_robot_replay_to_anygrasp_rejects_second_link6_adapter() -> None:
+def test_robot_replay_to_anygrasp_accepts_independent_link6_adapter() -> None:
     args = SimpleNamespace(
         candidate_frame_contract="anygrasp_raw",
         candidate_input_frame_contract="robot_replay",
@@ -298,15 +298,10 @@ def test_robot_replay_to_anygrasp_rejects_second_link6_adapter() -> None:
         piper_urdfik_apply_curobo_to_sapien_link_rotation=1,
     )
 
-    try:
-        planner.validate_preview_candidate_frame_contract(
-            args,
-            {"candidate_frame_mode": "robot_replay"},
-        )
-    except ValueError as exc:
-        assert "double frame compensation" in str(exc)
-    else:
-        raise AssertionError("candidate remap and link6 adapter must not apply the same frame change twice")
+    planner.validate_preview_candidate_frame_contract(
+        args,
+        {"candidate_frame_mode": "robot_replay"},
+    )
 
 
 if __name__ == "__main__":
@@ -321,5 +316,5 @@ if __name__ == "__main__":
     test_robot_replay_contract_rejects_raw_preview_data()
     test_robot_replay_source_can_convert_to_anygrasp_piper_tcp()
     test_robot_replay_to_anygrasp_piper_tcp_rejects_identity_remap()
-    test_robot_replay_to_anygrasp_rejects_second_link6_adapter()
+    test_robot_replay_to_anygrasp_accepts_independent_link6_adapter()
     print("camera-up and frame-contract regression tests: 12 passed")

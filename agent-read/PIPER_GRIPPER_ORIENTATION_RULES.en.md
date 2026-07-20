@@ -1,15 +1,15 @@
 # Piper Gripper Orientation Rules
 
-## 2026-07-20 V7 authoritative chain (supersedes conflicting V4--V6 interpretations)
+## 2026-07-20 V8 authoritative chain (corrects V7's IK-boundary interpretation)
 
 - AnyGrasp raw: red `+X` approach, green `+Y` opening, blue `+Z` plane normal.
 - robot_replay canonical: blue `+Z = raw +X` approach, green `+Y = raw +Y` opening, and `-red -X = raw +Z` plane normal.
 - Raw and canonical are two bases for the same physical gripper, not a physical 90-degree gripper rotation. Their silhouettes must overlap when rendered with their respective `local_x` and `local_z` actors.
-- Piper IK already applies one link6 `Ry(-90 deg)` adapter when `piper_apply_curobo_to_sapien_link_rotation=1`; the candidate rotation remains robot_replay and must not receive the same matrix again.
-- The 0515 camera-back-up rule is `-canonical X = raw +Z` toward world up, i.e. `forward=local_z, top=x, sign=-1`. The 5 cm target offset and 12 cm pregrasp both follow canonical local Z.
+- Candidate remapping expresses the canonical task target in Piper's physical gripper axes. The Curobo-to-SAPIEN link6 adapter maps solver and renderer model frames. Their semantics are independent and the correct chain applies each exactly once.
+- The 0515 camera-back direction is raw/Piper blue `+Z`; an upward-facing camera requires that blue axis to point downward in world. Equivalent parameters are `forward=local_x, top=z, sign=-1`, and target/pregrasp offsets follow raw/Piper local X.
 - V6's `robot_replay rotation + local-X forward` is a historical error. Successful execution only proves that the incorrect target was reachable.
 
-The V7 audit measures `0 deg` for all three mappings: `raw +X↔canonical +Z`, `raw +Y↔canonical +Y`, and `raw +Z↔-canonical X`. See `COMMANDS/candidate_frame_contract_v7.en.md`.
+The V7 audit measures `0 deg` for all three basis mappings, so the image remains correct. Its execution video did not convert the canonical target to the physical Piper TCP and is not valid execution evidence. See `COMMANDS/candidate_frame_contract_v8.en.md`.
 
 ## Current Takeaway
 

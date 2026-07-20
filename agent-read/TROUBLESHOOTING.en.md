@@ -141,9 +141,15 @@
 - For `pick_diverse_bottles/id0`, raw K2-left Top-score `#0` sets J5 to its `+1.2217 rad` upper limit and misses action by about `57 mm`. The next mount-up/IK/joint-limit-feasible candidate `#3` in the same ranking reduces the miss to `3.0 mm`.
 - Do not hide this failure by relaxing reach tolerance. Any replacement must be labeled constrained/feasible in the output.
 
-## Converting robot_replay to Piper +X still leaves a fixed 52--56 deg rotation error
+## The robot_replay candidate looks correct in the audit, but Piper forward/camera direction is wrong
 
-- Symptom: position is within 2--3 mm, but both arms retain about 52--56 deg rotation error.
-- Cause: the candidate side applies an explicit robot_replay-to-raw/Piper `Ry(-90 deg)` while `piper_apply_curobo_to_sapien_link_rotation=1` applies the corresponding link6 adapter again at IK, causing double compensation.
-- Fix: keep `candidate_input_frame_contract=robot_replay`, `candidate_frame_contract=robot_replay`, and `candidate_orientation_remap_label=identity`; use local-Z forward/top-X/sign -1 and retain exactly one IK link adapter.
-- Check: both contracts must be recorded as robot_replay in `plan_summary.json`, all mapped-axis errors in the six-panel audit must be 0 deg, and rotation tolerance must not be relaxed to hide double compensation.
+- Symptom: the raw/canonical six-panel silhouettes and axes agree, but the rendered Piper does not advance along red `+X`, or blue `+Z` points upward and therefore makes the wrist camera face downward.
+- Cause: V7 incorrectly treated the candidate basis change and the link6 model adapter as duplicate compensation, so a canonical pose entered the physical Piper `+X` TCP target unchanged. They belong to different boundaries.
+- Fix: declare input `robot_replay`, output `anygrasp_raw`, and use `swap_red_blue_keep_green`; camera-up, offset, approach, and debug actor all use raw/Piper `local_x`, with top `z/sign=-1`. Keep both the Piper global adapter and the Curobo-to-SAPIEN link6 adapter enabled.
+- Check: red `+X` is physical approach, green `+Y` is jaw opening, and blue `+Z` is camera-back; blue must point downward so the camera faces upward. Never hide a wrong pose with a 180-degree reach tolerance.
+
+## Why historical OursV2 completes despite a visibly wrong orientation
+
+- OursV2 uses the same Piper `urdfik` backend, not a separate canonical IK. It sets `execute_partial_cartesian_plan=0` and does not skip failed keypoints.
+- Its historical result relaxes `reach_rot_tol_deg` to `180` and `urdfik_max_rotation_threshold_rad` to `3.14`. Actual dual-arm errors at pregrasp/grasp/action are about `178--180 deg`, yet are marked reached and the close/action stages continue.
+- V8 keeps a strict 30-degree reach gate and preserves failures; it does not reuse the relaxed OursV2 orientation threshold.

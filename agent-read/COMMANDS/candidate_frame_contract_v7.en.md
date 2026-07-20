@@ -1,4 +1,6 @@
-# V7 candidate frame contracts and single link6 mapping
+# ~~V7 candidate frame contracts and single link6 mapping~~ (historical incorrect chain)
+
+> The V7 six-panel raw/canonical basis visualization is correct, but this page's execution command incorrectly sends a canonical target directly to the physical Piper TCP. Do not use it for new results; use `candidate_frame_contract_v8.en.md`. The old command and outputs remain for traceability.
 
 ## Parameter template (documentation only)
 

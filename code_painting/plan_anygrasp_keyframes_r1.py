@@ -1430,17 +1430,6 @@ def validate_preview_candidate_frame_contract(
         raise ValueError(
             "explicit candidate frame contracts require candidate_post_rot_xyz_deg=[0,0,0]"
         )
-    if (
-        input_contract == "robot_replay"
-        and output_contract == "anygrasp_raw"
-        and bool(args.piper_urdfik_apply_curobo_to_sapien_link_rotation)
-    ):
-        raise ValueError(
-            "double frame compensation: robot_replay was already remapped to anygrasp_raw, "
-            "so piper_urdfik_apply_curobo_to_sapien_link_rotation must be 0"
-        )
-
-
 def forward_axis_change_deg(
     rotation_a: np.ndarray,
     rotation_b: np.ndarray,

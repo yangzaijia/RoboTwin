@@ -141,9 +141,15 @@
 - `pick_diverse_bottles/id0` raw Top-score K2-left `#0` 的 J5 为 `+1.2217 rad` 上限，实际 action miss 约 `57 mm`；使用同一排序中下一项 mount-up/IK/joint-limit-feasible 的 `#3` 后降为 `3.0 mm`。
 - 不应靠放宽 reach tolerance 把该失败标成成功；输出必须把替代候选标成 constrained/feasible。
 
-## robot_replay 转成 Piper +X 后仍有约 52--56° 固定旋转误差
+## robot_replay 候选在图中正确，但 Piper 实体前进轴/相机方向错误
 
-- 症状：位置误差只有 2--3 mm，但双臂旋转误差固定在约 52--56°。
-- 原因：候选侧显式乘了 `robot_replay→raw/Piper Ry(-90°)`，同时 IK 的 `piper_apply_curobo_to_sapien_link_rotation=1` 又执行同类 link6 adapter，形成重复补偿。
-- 处理：候选保持 `candidate_input_frame_contract=robot_replay`、`candidate_frame_contract=robot_replay`、`candidate_orientation_remap_label=identity`；使用 local-Z forward/top-X/sign -1，并保留一次 IK link adapter。
-- 检查：`plan_summary.json` 必须记录两个 robot_replay contract；六联图映射误差应为 0°；不要用放宽 rotation tolerance 隐藏重复补偿。
+- 症状：raw/canonical 六联图的物理轮廓和轴对应正确，但执行视频中 Piper 夹爪没有沿红 `+X` 前进，或蓝 `+Z` 朝上导致腕部相机面朝下。
+- 原因：V7 把候选换基与 link6 模型 adapter 错当成同一次补偿，因而让 canonical pose 直接进入 Piper 物理 `+X` TCP target。两者实际位于不同边界。
+- 处理：输入声明 `robot_replay`，输出声明 `anygrasp_raw`，使用 `swap_red_blue_keep_green`；camera-up/offset/approach/debug actor 全部使用 raw/Piper `local_x`，top 使用 `z/sign=-1`；同时保留 Piper global adapter 与 Curobo→SAPIEN link6 adapter。
+- 检查：红 `+X` 是实体前进轴，绿 `+Y` 是开合轴，蓝 `+Z` 是相机背向；要求蓝轴朝下（相机面朝上）。不得通过 180° reach tolerance 把错误姿态标成成功。
+
+## OursV2 为什么可以跑完整但姿态明显不对
+
+- OursV2 使用同一 Piper `urdfik` 后端，不是另一套 canonical IK；`execute_partial_cartesian_plan=0`，也没有跳过失败关键点。
+- 该历史结果把 `reach_rot_tol_deg` 和 `urdfik_max_rotation_threshold_rad` 分别放宽到 `180°` 与 `3.14 rad`。pregrasp/grasp/action 的双臂旋转误差实际约 `178--180°`，仍被标为 reached，因而继续 close/action。
+- 新 V8 比较保持 `30°` reach 门限并原样保存失败；不复用 OursV2 的宽松姿态门限。

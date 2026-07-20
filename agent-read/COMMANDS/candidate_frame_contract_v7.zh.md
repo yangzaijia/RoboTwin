@@ -1,4 +1,6 @@
-# V7 候选坐标契约与单次 link6 映射
+# ~~V7 候选坐标契约与单次 link6 映射~~（历史错误链路）
+
+> V7 六联图的 raw/canonical 换基可视化正确，但本页执行命令错误地让 canonical target 直接进入 Piper 物理 TCP。请勿用于新结果；改用 `candidate_frame_contract_v8.zh.md`。旧命令与产物保留用于追溯。
 
 ## 参数模板（说明用，不可直接运行）
 

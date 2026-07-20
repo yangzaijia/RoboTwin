@@ -7,10 +7,10 @@
 
 ## 本轮新增
 
-- V7 将候选输入坐标与 planner 使用坐标拆成两个显式契约：`candidate_input_frame_contract` 描述 preview 来源，`candidate_frame_contract` 描述 camera-up、offset、pregrasp 和 debug actor 使用的局部轴。非 legacy 模式会在创建结果前拒绝未声明来源、错误 remap 和混合 local-X/local-Z 参数。
-- `robot_replay` 输入保持 canonical `+Z` approach；Piper IK 继续只使用既有的 Curobo→SAPIEN link6 `Ry(-90°)` adapter。不得在候选侧再次乘同一个 `Ry(-90°)`：实测会造成重复补偿并留下约 `52–56°` 旋转误差。
+- V8 修正 V7 对两个独立变换的误判：候选侧 `robot_replay → anygrasp_raw/Piper physical TCP` 是任务目标换基；IK 侧 Curobo-link6 → SAPIEN-link6 adapter 是求解 URDF 与渲染 URDF 的模型帧换基。正确链路必须同时执行两者，各执行一次。
+- `robot_replay` 输入以 canonical `+Z` 为 approach，经 `swap_red_blue_keep_green` 转为 Piper 物理 `+X` approach 后再进入原有 Piper URDFIK；IK 侧继续保留 global adapter 与 Curobo→SAPIEN link6 adapter。这里不存在独立的“canonical IK”求解器。
 - 正确物理轴对应为 `raw +X = canonical +Z`、`raw +Y = canonical +Y`、`raw +Z = -canonical +X`。`pick_diverse_bottles/id0` 的三组映射误差均为 `0°`；camera-back-up 使用 `-canonical X = raw +Z` 朝 world up。
-- V7 单集验证使用 K1 `L16/R9`、K2 `L19/R16`，pregrasp/grasp/action 全部 reached。六联图和四视角视频位于 `paper_qualitative_assets/.../id0/v7_single_mapping_consistent/`；标题栏与 480 px 视频内容分离。
+- V7 六联图的 raw/canonical 朝向对应仍然正确；V7 四视角执行视频的 planner target 坐标链错误，仅保留作历史反例。当前 V8 固定原始策略候选，不做 IK-feasible fallback，并以严格 30° reach 门限保留真实失败。
 - V6 候选几何审计推翻了“V6 已统一 AnyGrasp 轴语义”的结论。输入候选仍为 `candidate_frame_mode=robot_replay`：canonical 蓝 `+Z = raw AnyGrasp +X approach`；V6 却把同一旋转按红 `+X = forward` 使用。选中候选的 V6 stored rotation 与 `anygrasp_raw` 固定相差 `90°`。
 - V6 的 `-0.05 m` candidate offset 沿 stored red `+X`，而不是沿 raw AnyGrasp approach。`pick_diverse_bottles/id0/frame78/right #5` 从 raw center 到 object anchor 的 `4.68 cm` 增为 current target 的 `9.62 cm`。因此 V6 视频只能证明该错误目标可被 IK/关节执行，不能证明候选坐标链正确。
 - 新增只读导出器 `code_painting/export_v6_candidate_geometry_audit.py`。它为 frame 38/78 各生成 2×3 图：raw dense candidates、选中 raw poses、V6 stored remap、当前 `-5 cm` target、object-anchor 距离和 raw-vs-target overlay；不调用 IK、不覆盖旧素材。
@@ -36,7 +36,7 @@
 4. `PIPER_CANONICAL_TCP_V1.zh.md`
 5. `COMMANDS/piper_canonical_tcp_v1.zh.md`
 6. `SELECTION_STRATEGY_AUDIT_V4.zh.md`
-7. `COMMANDS/candidate_frame_contract_v7.zh.md`
+7. `COMMANDS/candidate_frame_contract_v8.zh.md`
 8. `COMMANDS/piper_v6_candidate_geometry_audit.zh.md`
 9. `COMMANDS/candidate_camera_mount_up_v6.zh.md`（历史 V6 复现，当前有已知轴混用）
 
