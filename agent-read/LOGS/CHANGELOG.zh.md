@@ -3411,3 +3411,12 @@ Validation: `RoboTwin_bw` 下 `py_compile`、12 项直接回归测试、wrapper 
 - 批次自动写 36 条 planner TSV、episode manifest 和 `DONE` marker 后退出；不需要 agent 持续轮询。
 
 Validation: Python `py_compile`、shell `bash -n`、12 集 AnyGrasp/D435 replay/HaMeR NPZ/标注/OursV2 输入审计全部通过；完整 dry-run 返回 0，严格生成 6 个 preview、36 个 planner、12 个 compose 命令，且未创建正式输出。两个新脚本被通用 `code_painting/*` ignore，提交时使用 targeted force-add，不改变全局 ignore。
+
+## 2026-07-21（V8 6×2 重合成与完成标记修复）
+
+- 审计发现 20260720 批次的 36 条策略视频均存在，但 12 次拼接全部触发 300 秒 timeout；旧 wrapper 未检查返回码，错误写入空 `DONE` 和 `episode_count=0` manifest。
+- 批处理新增 `--compose-only` 与 `--source-run-tag`，可复用已有策略视频并将合成结果写入独立新目录，不重跑 preview、规划或 IK。
+- 每集现在必须同时存在非空 MP4、manifest、`execution_status_v8.json` 且 MP4 完整解码；逐集结果写入 `compose_status.tsv`。
+- 总 manifest 明确记录 expected/completed/failure count；只有 12/12 成功才写 `DONE`，否则写 `FAILED` 并返回非零。
+
+Validation: 本地/远端 `bash -n`、Python `py_compile` 通过；同一配置的隔离单集 smoke 在 2 秒内生成 H.264/yuv420p MP4 与 manifest；正式参数 compose-only dry-run 返回 0，严格为 12 个 compose、0 个 preview、0 个 planner，且未创建新输出目录。新批次 12/12 ffprobe 与完整解码审计待正式重合成后记录。

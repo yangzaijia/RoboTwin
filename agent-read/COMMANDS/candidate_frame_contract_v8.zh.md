@@ -83,4 +83,16 @@ tmux new-session -d -s v8_raw_axes_6x2_20260720 \
   "cd /home/zaijia001/ssd/RoboTwin && bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2"
 ```
 
-批次根目录：`/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/`。`_run/DONE` 表示脚本自动完成；`_run/planner_status.tsv` 记录 36 条规划命令状态；每个 `<TASK>/id<ID>/execution_status_v8.json` 记录候选、阶段误差和视频路径。
+首次批次根目录 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/` 只保留为失败审计：12 次合成都触发旧版 300 秒 timeout，但旧 wrapper 忽略返回码并错误写入 `DONE`，该目录没有可用的 2×2 MP4。
+
+只复用已生成的 36 条策略视频、写入新目录的可运行重合成命令：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh \
+  --compose-only \
+  --source-run-tag v8_physical_axes_raw_batch_6x2_20260720 \
+  --run-tag v8_physical_axes_raw_batch_6x2_20260721_recomposed
+```
+
+修正版只有在 12/12 个 MP4、每集 manifest、`execution_status_v8.json` 和完整解码全部成功时才写 `_run/DONE`。失败时写 `_run/FAILED` 并以非零状态退出；`_run/compose_status.tsv` 记录逐集状态。新批次根目录为 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260721_recomposed/`。

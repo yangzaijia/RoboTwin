@@ -83,4 +83,16 @@ tmux new-session -d -s v8_raw_axes_6x2_20260720 \
   "cd /home/zaijia001/ssd/RoboTwin && bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh --gpu 2"
 ```
 
-The batch root is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/`. `_run/DONE` marks automatic completion; `_run/planner_status.tsv` records 36 planner invocations; each `<TASK>/id<ID>/execution_status_v8.json` records selected candidates, stage errors, and video paths.
+The first batch root, `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260720/`, is retained only as failure evidence. All 12 compositions hit the old 300-second timeout, while the old wrapper ignored the return code and incorrectly wrote `DONE`; that directory contains no usable 2x2 MP4.
+
+Runnable recomposition command that reuses all 36 generated strategy videos and writes a new output root:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh \
+  --compose-only \
+  --source-run-tag v8_physical_axes_raw_batch_6x2_20260720 \
+  --run-tag v8_physical_axes_raw_batch_6x2_20260721_recomposed
+```
+
+The corrected wrapper writes `_run/DONE` only after all 12 MP4s, per-episode manifests, `execution_status_v8.json` files, and full decodes succeed. On failure it writes `_run/FAILED` and exits nonzero; `_run/compose_status.tsv` records each episode. The corrected batch root is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260721_recomposed/`.

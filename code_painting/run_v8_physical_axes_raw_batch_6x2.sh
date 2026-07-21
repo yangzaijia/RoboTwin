@@ -6,29 +6,37 @@ ASSET_ROOT=/home/zaijia001/ssd/data/piper/paper_qualitative_assets
 GPU=2
 DRY_RUN=0
 RUN_TAG=v8_physical_axes_raw_batch_6x2_20260720
+SOURCE_RUN_TAG=
+COMPOSE_ONLY=0
 
 while (($# > 0)); do
   case "$1" in
     --gpu) GPU="$2"; shift 2 ;;
     --run-tag) RUN_TAG="$2"; shift 2 ;;
+    --source-run-tag) SOURCE_RUN_TAG="$2"; shift 2 ;;
+    --compose-only) COMPOSE_ONLY=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     *) echo "ERROR unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
+SOURCE_RUN_TAG="${SOURCE_RUN_TAG:-$RUN_TAG}"
+
 source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
 
-PREVIEW_ROOT="$ROOT/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_${RUN_TAG}"
+PREVIEW_ROOT="$ROOT/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_${SOURCE_RUN_TAG}"
 PLANNER_BASE="$ROOT/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes"
-ORIENTATION_ROOT="$PLANNER_BASE/paper_${RUN_TAG}_orientation"
-FUSED_ROOT="$PLANNER_BASE/paper_${RUN_TAG}_fused"
-TOPSCORE_ROOT="$PLANNER_BASE/paper_${RUN_TAG}_topscore"
+ORIENTATION_ROOT="$PLANNER_BASE/paper_${SOURCE_RUN_TAG}_orientation"
+FUSED_ROOT="$PLANNER_BASE/paper_${SOURCE_RUN_TAG}_fused"
+TOPSCORE_ROOT="$PLANNER_BASE/paper_${SOURCE_RUN_TAG}_topscore"
 OURS_ROOT="$PLANNER_BASE/L16_de_human_replay_clean_right_cam"
 OUTPUT_ROOT="$ASSET_ROOT/outputs/${RUN_TAG}"
+SOURCE_OUTPUT_ROOT="$ASSET_ROOT/outputs/${SOURCE_RUN_TAG}"
 RUN_ROOT="$OUTPUT_ROOT/_run"
 LOG_ROOT="$RUN_ROOT/logs"
 STATUS_TSV="$RUN_ROOT/planner_status.tsv"
+COMPOSE_STATUS_TSV="$RUN_ROOT/compose_status.tsv"
 BATCH_LOG="$RUN_ROOT/batch.log"
 
 EPISODES=(
@@ -48,7 +56,14 @@ if ((DRY_RUN == 0)); then
   mkdir -p "$LOG_ROOT"
   exec > >(tee -a "$BATCH_LOG") 2>&1
   if [[ ! -f "$STATUS_TSV" ]]; then
-    printf 'task\tepisode_id\tstrategy\tcommand_rc\tsummary\tvideo\n' > "$STATUS_TSV"
+    if ((COMPOSE_ONLY)) && [[ -f "$SOURCE_OUTPUT_ROOT/_run/planner_status.tsv" ]]; then
+      cp "$SOURCE_OUTPUT_ROOT/_run/planner_status.tsv" "$STATUS_TSV"
+    else
+      printf 'task\tepisode_id\tstrategy\tcommand_rc\tsummary\tvideo\n' > "$STATUS_TSV"
+    fi
+  fi
+  if [[ ! -f "$COMPOSE_STATUS_TSV" ]]; then
+    printf 'task\tepisode_id\tcommand_rc\tvideo\tmanifest\tstatus\n' > "$COMPOSE_STATUS_TSV"
   fi
 fi
 
@@ -161,6 +176,11 @@ run_planner() {
 
 compose_episode() {
   local task="$1" episode_id="$2"
+  local episode_dir="$OUTPUT_ROOT/$task/id${episode_id}"
+  local output_video="$episode_dir/candidate_retarget_grid_2x2_physical_axes_raw_v8.mp4"
+  local output_manifest="$episode_dir/candidate_retarget_grid_2x2_physical_axes_raw_v8_manifest.json"
+  local output_status="$episode_dir/execution_status_v8.json"
+  local log="$LOG_ROOT/${task}_id${episode_id}_compose.log"
   local command=(
     python3 "$ROOT/code_painting/compose_v8_physical_axes_raw_batch.py"
     --task "$task" --episode-id "$episode_id"
@@ -173,25 +193,58 @@ compose_episode() {
     return 0
   fi
   echo "[compose-run] task=$task id=$episode_id"
-  timeout 300 "${command[@]}" > "$LOG_ROOT/${task}_id${episode_id}_compose.log" 2>&1
-  echo "[compose-done] task=$task id=$episode_id"
+  timeout 300 "${command[@]}" > "$log" 2>&1
+  local rc=$?
+  if ((rc != 0)); then
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$task" "$episode_id" "$rc" "$output_video" "$output_manifest" "$output_status" \
+      >> "$COMPOSE_STATUS_TSV"
+    echo "[compose-failed] task=$task id=$episode_id rc=$rc log=$log"
+    return 1
+  fi
+  if [[ ! -s "$output_video" || ! -s "$output_manifest" || ! -s "$output_status" ]]; then
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$task" "$episode_id" 4 "$output_video" "$output_manifest" "$output_status" \
+      >> "$COMPOSE_STATUS_TSV"
+    echo "[compose-failed] task=$task id=$episode_id rc=4 missing_output=1 log=$log"
+    return 1
+  fi
+  if ! ffmpeg -v error -i "$output_video" -f null -; then
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$task" "$episode_id" 5 "$output_video" "$output_manifest" "$output_status" \
+      >> "$COMPOSE_STATUS_TSV"
+    echo "[compose-failed] task=$task id=$episode_id rc=5 decode_failed=1 log=$log"
+    return 1
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$task" "$episode_id" 0 "$output_video" "$output_manifest" "$output_status" \
+    >> "$COMPOSE_STATUS_TSV"
+  echo "[compose-done] task=$task id=$episode_id video=$output_video"
+  return 0
 }
 
-echo "[batch-start] run_tag=$RUN_TAG gpu=$GPU dry_run=$DRY_RUN episodes=${#EPISODES[@]}"
+echo "[batch-start] run_tag=$RUN_TAG source_run_tag=$SOURCE_RUN_TAG compose_only=$COMPOSE_ONLY gpu=$GPU dry_run=$DRY_RUN episodes=${#EPISODES[@]}"
 
-render_preview_task handover_bottle 1 3
-render_preview_task pick_diverse_bottles 0 1
-render_preview_task place_bread_basket 0 1
-render_preview_task pnp_bread 7 8
-render_preview_task pnp_tray 2 3
-render_preview_task stack_cups 0 1
+if ((COMPOSE_ONLY == 0)); then
+  render_preview_task handover_bottle 1 3
+  render_preview_task pick_diverse_bottles 0 1
+  render_preview_task place_bread_basket 0 1
+  render_preview_task pnp_bread 7 8
+  render_preview_task pnp_tray 2 3
+  render_preview_task stack_cups 0 1
+fi
 
+COMPOSE_FAILURES=0
 for pair in "${EPISODES[@]}"; do
   task="${pair%%:*}"; episode_id="${pair##*:}"
-  run_planner "$task" "$episode_id" orientation "$ORIENTATION_ROOT" orientation planner
-  run_planner "$task" "$episode_id" fused "$FUSED_ROOT" fused planner
-  run_planner "$task" "$episode_id" top_score "$TOPSCORE_ROOT" orientation top_score_auto
-  compose_episode "$task" "$episode_id"
+  if ((COMPOSE_ONLY == 0)); then
+    run_planner "$task" "$episode_id" orientation "$ORIENTATION_ROOT" orientation planner
+    run_planner "$task" "$episode_id" fused "$FUSED_ROOT" fused planner
+    run_planner "$task" "$episode_id" top_score "$TOPSCORE_ROOT" orientation top_score_auto
+  fi
+  if ! compose_episode "$task" "$episode_id"; then
+    ((COMPOSE_FAILURES += 1))
+  fi
 done
 
 if ((DRY_RUN)); then
@@ -199,22 +252,36 @@ if ((DRY_RUN)); then
   exit 0
 fi
 
-python3 - "$OUTPUT_ROOT" "$STATUS_TSV" <<'PY'
+if ! python3 - "$OUTPUT_ROOT" "$STATUS_TSV" "$COMPOSE_STATUS_TSV" "${#EPISODES[@]}" "$COMPOSE_FAILURES" <<'PY'
 import json,sys
 from datetime import datetime,timezone
 from pathlib import Path
-root=Path(sys.argv[1]); status_tsv=Path(sys.argv[2])
+root=Path(sys.argv[1]); status_tsv=Path(sys.argv[2]); compose_status_tsv=Path(sys.argv[3])
+expected=int(sys.argv[4]); compose_failures=int(sys.argv[5])
 statuses=[]
 for path in sorted(root.glob("*/id*/execution_status_v8.json")):
     statuses.append(json.loads(path.read_text(encoding="utf-8")))
 manifest={
     "schema_version":1,
     "completed_at_utc":datetime.now(timezone.utc).isoformat(),
+    "expected_episode_count":expected,
     "episode_count":len(statuses),
+    "compose_failure_count":compose_failures,
     "planner_status_tsv":str(status_tsv),
+    "compose_status_tsv":str(compose_status_tsv),
     "episodes":statuses,
 }
 (root/"episode_batch_manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+if len(statuses) != expected or compose_failures:
+    (root/"_run"/"FAILED").write_text(
+        f"expected={expected} completed={len(statuses)} compose_failures={compose_failures}\n",
+        encoding="utf-8",
+    )
+    print(f"[batch-failed] expected={expected} completed={len(statuses)} compose_failures={compose_failures}")
+    raise SystemExit(1)
 (root/"_run"/"DONE").touch()
-print(f"[batch-complete] episodes={len(statuses)} manifest={root/'episode_batch_manifest.json'}")
+print(f"[batch-complete] episodes={len(statuses)}/{expected} manifest={root/'episode_batch_manifest.json'}")
 PY
+then
+  exit 5
+fi

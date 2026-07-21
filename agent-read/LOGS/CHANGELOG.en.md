@@ -3413,3 +3413,12 @@ Validation: `py_compile`, 12 direct regressions, wrapper `bash -n`, all three st
 - The batch writes a 36-invocation planner TSV, episode manifest, and `DONE` marker before exiting; no continuous agent polling is required.
 
 Validation: Python `py_compile`, shell `bash -n`, and all 12 AnyGrasp/D435 replay/HaMeR NPZ/annotation/OursV2 input checks pass. The full dry-run returns zero with exactly 6 preview, 36 planner, and 12 compose commands and creates no formal output. The two new scripts match the general `code_painting/*` ignore rule, so they are included with a targeted force-add without changing global ignore policy.
+
+## 2026-07-21 (V8 6x2 recomposition and completion-marker fix)
+
+- Auditing found all 36 strategy videos in the 20260720 batch, but every one of the 12 compositions hit the 300-second timeout. The old wrapper ignored that return code and incorrectly wrote an empty `DONE` plus an `episode_count=0` manifest.
+- The batch now accepts `--compose-only` and `--source-run-tag`, reusing existing strategy videos into an isolated output root without rerunning previews, planning, or IK.
+- Each episode now requires a nonempty MP4, manifest, `execution_status_v8.json`, and a full MP4 decode. Per-episode results are written to `compose_status.tsv`.
+- The batch manifest records expected/completed/failure counts. `DONE` is written only for 12/12 success; otherwise the batch writes `FAILED` and exits nonzero.
+
+Validation: local and remote `bash -n` plus Python `py_compile` pass. An isolated one-episode smoke using the same config produces an H.264/yuv420p MP4 and manifest in 2 seconds. The formal compose-only dry-run returns zero with exactly 12 compose, zero preview, and zero planner commands and creates no new output root. The corrected batch's 12/12 ffprobe and full-decode audit will be recorded after formal recomposition.
