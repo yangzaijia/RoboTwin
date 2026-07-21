@@ -193,7 +193,7 @@ compose_episode() {
     return 0
   fi
   echo "[compose-run] task=$task id=$episode_id"
-  timeout 300 "${command[@]}" > "$log" 2>&1
+  timeout --foreground 300 "${command[@]}" </dev/null > "$log" 2>&1
   local rc=$?
   if ((rc != 0)); then
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
