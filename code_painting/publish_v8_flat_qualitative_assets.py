@@ -207,6 +207,17 @@ def exporter_config(
     output_dir: Path,
 ) -> dict[str, Any]:
     task = episode["task"]
+    metadata = json.loads(record["metadata_path"].read_text(encoding="utf-8"))
+    active = tuple(
+        arm
+        for arm in ("left", "right")
+        if any(
+            str(item.get("strategy")) == "oursv2" and str(item.get("arm")) == arm
+            for item in metadata.get("records", [])
+        )
+    )
+    if not active:
+        raise ValueError(f"no active OursV2 arm in {record['metadata_path']}")
     return {
         "schema_version": 1,
         "robotwin_root": str(args.robotwin_root),
@@ -219,6 +230,7 @@ def exporter_config(
         "camera_cv_axis_mode": "legacy_r1",
         "orientation_metric": "approach_axis",
         "max_orientation_error_deg": 90.0,
+        "active_arms": list(active),
         "target_objects": TARGET_OBJECTS[task],
         "weights": {"anygrasp": 0.25, "orientation": 0.75},
         "render": {
@@ -277,7 +289,11 @@ def main() -> int:
     if args.output_root.exists():
         raise FileExistsError(f"refusing existing output: {args.output_root}")
 
-    exporter = args.asset_root / "export_keyframe_candidate_comparison_v3.py"
+    exporter = (
+        args.robotwin_root
+        / "code_painting"
+        / "export_keyframe_candidate_comparison_v3_active_arms.py"
+    )
     if not exporter.is_file():
         raise FileNotFoundError(exporter)
     staging_release = args.output_root.with_name(f".{args.output_root.name}.staging")
@@ -325,6 +341,7 @@ def main() -> int:
                             "geometry": list(geometry),
                             "sha256": sha256(flat_path),
                             "semantics": "legacy_v3_canonical_approach_axis",
+                            "active_arms": config["active_arms"],
                             "sources": {
                                 "metadata": str(record["metadata_path"]),
                                 "raw_grasp": str(record["raw_grasp_json"]),

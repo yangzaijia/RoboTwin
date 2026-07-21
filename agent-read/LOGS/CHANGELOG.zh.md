@@ -3429,5 +3429,6 @@ Validation: 本地/远端 `bash -n`、Python `py_compile` 和三分支状态标�
 - 六格图是真正的 2 行×3 列：AnyGrasp dense、Orientation、Fused、Top-score、OursV2、all-method overlay；按用户要求暂用上一版 canonical/V3 approach-axis debug 语义并在 manifest/README 显式标注。
 - `--move-videos` 将视频移到扁平目录，并在原正式嵌套路径放回绝对符号链接，避免旧 manifest 和引用失效；生成失败时回滚已移动视频并移除本轮部分发布目录。
 - 发布目录附带 `README.md` 和 `flat_manifest.json`，记录每个文件的来源、SHA-256、PNG 尺寸、视频 ffprobe 和移动策略。
+- 首次正式发布在第一张单手图安全退出：旧 V3 导出器硬编码要求左右手。新增 active-arm 兼容层，以 OursV2 metadata 为真值；单手只绘制真实手，双手绘制 BOTH，旧 metadata 缺失的 Orientation/Fused 只对 active hand 重建。
 
-Validation: 本地/远端 `py_compile` 通过；正式参数 dry-run 精确发现 12 episode/38 frame，所有 metadata/raw grasp/object-debug/video 输入有效且未创建输出目录；`pick_diverse_bottles/id0/frame38` 隔离 smoke 使用 V8 object-debug 成功生成 1920×1152 六格图，OpenCV 读取通过，选择为 Orientation/Fused `L16/R5`、Top-score `L0/R3`、OursV2 human target。正式发布、全部 PNG 和 12 MP4 审计待执行。
+Validation: 本地/远端 `py_compile` 通过；正式参数 dry-run 精确发现 12 episode/38 frame，所有 metadata/raw grasp/object-debug/video 输入有效且未创建输出目录；双手 `pick_diverse_bottles/id0/frame38` smoke 为 1920×1152，选择 Orientation/Fused `L16/R5`、Top-score `L0/R3`；单手 `handover_bottle/id1/frame39` smoke 同为 1920×1152，selection metadata 只有 right，视觉 QA 标题为 RIGHT 且未绘制左手。首次正式 attempt 在移动视频前退出，未留下发布目录。正式发布、全部 PNG 和 12 MP4 审计待重试。

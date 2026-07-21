@@ -127,3 +127,5 @@ python code_painting/publish_v8_flat_qualitative_assets.py --move-videos
 ```
 
 `--move-videos` moves all 12 formal MP4s into the flat release and creates symbolic links at their former structured paths, keeping existing manifest paths valid. The 38 PNGs are real 2-row x 3-column sheets, but intentionally use the previous canonical/V3 approach-axis debug semantics requested for this release; they must not be described as current Piper physical-axis V8 debug images. The default output is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`.
+
+The six-panel compatibility layer `export_keyframe_candidate_comparison_v3_active_arms.py` derives active arms from real OursV2 metadata. Single-arm frames draw only LEFT or RIGHT, while dual-arm frames draw BOTH; an inactive hand must never be copied or invented to satisfy the legacy exporter's fixed dual-arm assumption. If legacy metadata lacks Orientation/Fused, only the real active arm receives a reconstructed strategy record using the same V3 approach-axis scoring.
