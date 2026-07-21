@@ -98,3 +98,5 @@ bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh \
 修正版只有在 12/12 个 MP4、每集 manifest、`execution_status_v8.json` 和完整解码全部成功时才写 `_run/DONE`。失败时写 `_run/FAILED` 并以非零状态退出；`_run/compose_status.tsv` 记录逐集状态。新批次根目录为 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260721_recomposed/`。
 
 tmux 中的 compose 必须使用 `timeout --foreground ... </dev/null`。普通 `timeout` 会把 FFmpeg 放进非前台进程组；FFmpeg读取终端控制输入时会收到 `SIGTTIN` 并进入 `T`（stopped）状态，看起来像编码超时。
+
+格子状态标签以真实 `reached` 为准：严格无失败显示 `STRICT PASS`；有失败但 action 到达显示 `ACTION REACHED`；action 被跳过或未到达统一显示 `ACTION NOT REACHED`。不能仅因 summary 中存在 `action` 键就标为已执行。

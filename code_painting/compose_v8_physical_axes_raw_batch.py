@@ -117,8 +117,8 @@ def compact_status(method: dict[str, Any]) -> str:
     failures = status.get("failure_count")
     if not status.get("execution_failed"):
         return "STRICT PASS"
-    action_present = "action" in (status.get("stages") or {})
-    suffix = "ACTION PRESENT" if action_present else "EARLY STOP"
+    action_reached = bool((status.get("stages") or {}).get("action", {}).get("reached", False))
+    suffix = "ACTION REACHED" if action_reached else "ACTION NOT REACHED"
     return f"FAILURES {failures} | {suffix}"
 
 

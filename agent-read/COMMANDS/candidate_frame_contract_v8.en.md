@@ -98,3 +98,5 @@ bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh \
 The corrected wrapper writes `_run/DONE` only after all 12 MP4s, per-episode manifests, `execution_status_v8.json` files, and full decodes succeed. On failure it writes `_run/FAILED` and exits nonzero; `_run/compose_status.tsv` records each episode. The corrected batch root is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_physical_axes_raw_batch_6x2_20260721_recomposed/`.
 
 Composition inside tmux must use `timeout --foreground ... </dev/null`. Plain `timeout` places FFmpeg in a non-foreground process group; when FFmpeg reads terminal control input it receives `SIGTTIN` and enters `T` (stopped) state, which superficially looks like a slow encode timeout.
+
+Tile status labels follow actual `reached` state: a failure-free execution is `STRICT PASS`; a failed run whose action reached is `ACTION REACHED`; a skipped or missed action is `ACTION NOT REACHED`. Merely having an `action` key in the summary does not mean that action executed successfully.

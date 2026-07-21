@@ -3419,5 +3419,6 @@ Validation: Python `py_compile`、shell `bash -n`、12 集 AnyGrasp/D435 replay/
 - 每集现在必须同时存在非空 MP4、manifest、`execution_status_v8.json` 且 MP4 完整解码；逐集结果写入 `compose_status.tsv`。
 - 总 manifest 明确记录 expected/completed/failure count；只有 12/12 成功才写 `DONE`，否则写 `FAILED` 并返回非零。
 - 正式 tmux smoke 进一步确认旧 300 秒现象不是编码性能问题：普通 GNU `timeout` 的子进程组在 FFmpeg读取 tmux终端时收到 `SIGTTIN`，Python/FFmpeg均进入 `T` 状态。compose 改用 `timeout --foreground` 并将 stdin 连接 `/dev/null`。
+- 首轮 12/12 重合成的视觉 QA 发现旧 `ACTION PRESENT` 只检查 stage key 是否存在，会把 `Skipped/reached=false` 误标为 action 存在；标签改为基于真实 reached 的 `ACTION REACHED` / `ACTION NOT REACHED`。
 
-Validation: 本地/远端 `bash -n`、Python `py_compile` 通过；同一配置的隔离单集 smoke 在 2 秒内生成 H.264/yuv420p MP4 与 manifest；正式参数 compose-only dry-run 返回 0，严格为 12 个 compose、0 个 preview、0 个 planner，且未创建新输出目录。首个 tmux attempt 的进程树复核到 Python/FFmpeg 为 `T`/`do_signal_stop`，未完成目录已重命名保留为 `..._attempt1_sigttin_stopped`。新批次 12/12 ffprobe 与完整解码审计待重启后记录。
+Validation: 本地/远端 `bash -n`、Python `py_compile` 通过；同一配置的隔离单集 smoke 在 2 秒内生成 H.264/yuv420p MP4 与 manifest；正式参数 compose-only dry-run 返回 0，严格为 12 个 compose、0 个 preview、0 个 planner，且未创建新输出目录。首个 tmux attempt 的进程树复核到 Python/FFmpeg 为 `T`/`do_signal_stop`，未完成目录已重命名保留为 `..._attempt1_sigttin_stopped`。foreground 修复后首轮重合成达到 12/12、全部完整解码，但因状态标签语义问题保留为旧标签审计副本；最终标签版待重合成。
