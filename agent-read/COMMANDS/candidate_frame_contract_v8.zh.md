@@ -100,3 +100,30 @@ bash code_painting/run_v8_physical_axes_raw_batch_6x2.sh \
 tmux 中的 compose 必须使用 `timeout --foreground ... </dev/null`。普通 `timeout` 会把 FFmpeg 放进非前台进程组；FFmpeg读取终端控制输入时会收到 `SIGTTIN` 并进入 `T`（stopped）状态，看起来像编码超时。
 
 格子状态标签以真实 `reached` 为准：严格无失败显示 `STRICT PASS`；有失败但 action 到达显示 `ACTION REACHED`；action 被跳过或未到达统一显示 `ACTION NOT REACHED`。不能仅因 summary 中存在 `action` 键就标为已执行。
+
+## 6×2 论文素材扁平发布
+
+命名规则：视频为 `{task}_{id}_00_retarget_2x2_v8.mp4`；六格图为 `{task}_{id}_{order}_keyframe_{frame}_strategies_2x3_legacy_v3.png`。同一 episode 的文件按名称排序后连续出现。
+
+说明模板（不可直接运行）：
+
+```bash
+python code_painting/publish_v8_flat_qualitative_assets.py \
+  --source-video-root <STRUCTURED_V8_VIDEO_ROOT> \
+  --preview-root <V8_PREVIEW_ROOT> \
+  --metadata-root <LEGACY_V3_METADATA_ROOT> \
+  --output-root <NEW_FLAT_RELEASE_ROOT> \
+  [--move-videos] [--dry-run]
+```
+
+正式可运行命令：
+
+```bash
+source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+conda activate RoboTwin_bw
+cd /home/zaijia001/ssd/RoboTwin
+python code_painting/publish_v8_flat_qualitative_assets.py --dry-run --move-videos
+python code_painting/publish_v8_flat_qualitative_assets.py --move-videos
+```
+
+`--move-videos` 将 12 个正式 MP4 移到扁平目录，并在原嵌套路径创建指向新文件的符号链接，保持已有 manifest 路径有效。38 张 PNG 是真正的 2 行×3 列六格图，但按用户要求暂用上一版 canonical/V3 approach-axis debug 语义；不得称为最新 Piper 物理轴 V8 debug 图。默认输出为 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`。

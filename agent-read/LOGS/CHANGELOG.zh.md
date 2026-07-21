@@ -3422,3 +3422,12 @@ Validation: Python `py_compile`、shell `bash -n`、12 集 AnyGrasp/D435 replay/
 - 首轮 12/12 重合成的视觉 QA 发现旧 `ACTION PRESENT` 只检查 stage key 是否存在，会把 `Skipped/reached=false` 误标为 action 存在；标签改为基于真实 reached 的 `ACTION REACHED` / `ACTION NOT REACHED`。
 
 Validation: 本地/远端 `bash -n`、Python `py_compile` 和三分支状态标签单测通过；同一配置的隔离单集 smoke 在 2 秒内生成 H.264/yuv420p MP4 与 manifest；正式参数 compose-only dry-run 返回 0，严格为 12 个 compose、0 个 preview、0 个 planner。首个 tmux attempt 的 Python/FFmpeg 为 `T`/`do_signal_stop`，保留为 `..._attempt1_sigttin_stopped`；foreground 后首轮 12/12 保留为 `..._attempt2_old_action_label`。最终正式目录达到 12/12 MP4、12 manifest、12 execution status、12 compose rc=0、可用源缺失 0，所有 MP4 ffprobe 与 `-nostdin` 完整解码零错误；代表视频为 H.264/yuv420p、1280×796、30 fps、21.4 秒，抽帧视觉 QA 确认独立标题栏与 `ACTION NOT REACHED` 正确。
+
+## 2026-07-21（V8 6×2 扁平论文素材发布）
+
+- 新增扁平发布脚本，将 12 个 V8 2×2 视频和 38 个关键帧六格图整理到单一目录，统一 `{task}_{id}_{order}_{description}` 命名，使同 episode 素材按文件名自然相邻。
+- 六格图是真正的 2 行×3 列：AnyGrasp dense、Orientation、Fused、Top-score、OursV2、all-method overlay；按用户要求暂用上一版 canonical/V3 approach-axis debug 语义并在 manifest/README 显式标注。
+- `--move-videos` 将视频移到扁平目录，并在原正式嵌套路径放回绝对符号链接，避免旧 manifest 和引用失效；生成失败时回滚已移动视频并移除本轮部分发布目录。
+- 发布目录附带 `README.md` 和 `flat_manifest.json`，记录每个文件的来源、SHA-256、PNG 尺寸、视频 ffprobe 和移动策略。
+
+Validation: 本地/远端 `py_compile` 通过；正式参数 dry-run 精确发现 12 episode/38 frame，所有 metadata/raw grasp/object-debug/video 输入有效且未创建输出目录；`pick_diverse_bottles/id0/frame38` 隔离 smoke 使用 V8 object-debug 成功生成 1920×1152 六格图，OpenCV 读取通过，选择为 Orientation/Fused `L16/R5`、Top-score `L0/R3`、OursV2 human target。正式发布、全部 PNG 和 12 MP4 审计待执行。

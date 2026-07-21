@@ -100,3 +100,30 @@ The corrected wrapper writes `_run/DONE` only after all 12 MP4s, per-episode man
 Composition inside tmux must use `timeout --foreground ... </dev/null`. Plain `timeout` places FFmpeg in a non-foreground process group; when FFmpeg reads terminal control input it receives `SIGTTIN` and enters `T` (stopped) state, which superficially looks like a slow encode timeout.
 
 Tile status labels follow actual `reached` state: a failure-free execution is `STRICT PASS`; a failed run whose action reached is `ACTION REACHED`; a skipped or missed action is `ACTION NOT REACHED`. Merely having an `action` key in the summary does not mean that action executed successfully.
+
+## Flat publication of the 6x2 paper assets
+
+Naming: videos use `{task}_{id}_00_retarget_2x2_v8.mp4`; six-panel images use `{task}_{id}_{order}_keyframe_{frame}_strategies_2x3_legacy_v3.png`. Filename sorting keeps each episode's video and keyframe sheets adjacent.
+
+Documentation template (not directly runnable):
+
+```bash
+python code_painting/publish_v8_flat_qualitative_assets.py \
+  --source-video-root <STRUCTURED_V8_VIDEO_ROOT> \
+  --preview-root <V8_PREVIEW_ROOT> \
+  --metadata-root <LEGACY_V3_METADATA_ROOT> \
+  --output-root <NEW_FLAT_RELEASE_ROOT> \
+  [--move-videos] [--dry-run]
+```
+
+Runnable formal commands:
+
+```bash
+source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+conda activate RoboTwin_bw
+cd /home/zaijia001/ssd/RoboTwin
+python code_painting/publish_v8_flat_qualitative_assets.py --dry-run --move-videos
+python code_painting/publish_v8_flat_qualitative_assets.py --move-videos
+```
+
+`--move-videos` moves all 12 formal MP4s into the flat release and creates symbolic links at their former structured paths, keeping existing manifest paths valid. The 38 PNGs are real 2-row x 3-column sheets, but intentionally use the previous canonical/V3 approach-axis debug semantics requested for this release; they must not be described as current Piper physical-axis V8 debug images. The default output is `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`.
