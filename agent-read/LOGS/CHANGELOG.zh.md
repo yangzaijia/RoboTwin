@@ -3441,3 +3441,12 @@ Validation: 更新后正式参数 dry-run 再次精确通过 12 episode/38 frame
 - 正式发布完成到 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`。12 个视频已移动，旧结构化路径改为有效绝对符号链接；38 张图和视频按 `{task}_{id}_...` 扁平命名，同 episode 自然相邻。
 
 Validation: 独立审计确认目录只有 52 个普通文件（12 MP4 + 38 PNG + README + manifest）、0 子目录；38 PNG 均为 1920×1152；12 MP4 均为 H.264/yuv420p、1280×796、30 FPS 并通过完整 FFmpeg 解码；12 个旧路径均 resolve 到新文件。正式双手 `pick_diverse_bottles/id0/frame38` 与单手 `handover_bottle/id1/frame39` 原图视觉 QA 通过。
+
+## 2026-07-21（V8 视频目标/实际 EE 姿态审计）
+
+- 确认 `pick_diverse_bottles/id0` 的两个 legacy V3 六格图不是 V8 视频的逐候选匹配：frame38 仅 Orientation/Fused 相同；frame78 和两个 Top-score 左右候选均存在版本差异。
+- 新增 `overlay_v8_execution_pose_audit.py`，从 V8 plan summary 与逐帧 execution metrics 直接投影真实 IK target（彩色 C-gripper + XYZ）和实际 EE（白色 C-gripper），不再引用旧图片候选。
+- grasp/action 末帧插入 1 秒 arrival hold，逐手显示 PASS/FAIL、位置与旋转误差；缺失 action 使用 `NOT EXECUTED`，不伪造 Top-score frame78。
+- 离线投影修复 SAPIEN entity camera `+X` forward 与 OpenGL model matrix `-Z` forward 的差异；扁平 README/manifest 已登记三个补充文件。
+
+Validation: Python `py_compile`、正式参数 dry-run、三路 640×480/10 FPS overlay 完整解码、最终 H.264/yuv420p 1280×796/30 FPS/21.4 秒完整解码、1920×1152 arrival sheet 尺寸、KF38/KF78 原分辨率视觉 QA 均通过。Top-score KF38 的真实状态为 left PASS `4.3 mm/0.2°`、right FAIL `3.5 mm/33.2°`；Orientation/Fused 的 KF38/KF78 均双手 PASS。

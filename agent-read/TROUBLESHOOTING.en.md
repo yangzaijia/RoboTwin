@@ -153,3 +153,10 @@
 - OursV2 uses the same Piper `urdfik` backend, not a separate canonical IK. It sets `execute_partial_cartesian_plan=0` and does not skip failed keypoints.
 - Its historical result relaxes `reach_rot_tol_deg` to `180` and `urdfik_max_rotation_threshold_rad` to `3.14`. Actual dual-arm errors at pregrasp/grasp/action are about `178--180 deg`, yet are marked reached and the close/action stages continue.
 - V8 keeps a strict 30-degree reach gate and preserves failures; it does not reuse the relaxed OursV2 orientation threshold.
+
+## Offline gripper projections land outside the image
+
+- Symptom: target/actual poses in `debug_execution_metrics.jsonl` are numerically plausible and the source video shows its target axes, but an offline C-gripper disappears or projects thousands of pixels away.
+- Cause: the metrics store the SAPIEN camera entity pose. In this project that pose uses local `+X` forward, `+Y` left, and `+Z` up; it is not the OpenGL `-Z`-forward matrix returned by `camera.get_model_matrix()`.
+- Fix: transform the world point into entity-local coordinates, then project with `OpenCV right=-local Y, down=-local Z, forward=local X`. Do not reuse the `[x,-y,-z]` conversion intended for `get_model_matrix()`.
+- Validation: the target C-gripper must share its center with the source video's SAPIEN target-axis actor. Original-resolution KF38/KF78 arrival images for `pick_diverse_bottles/id0` pass this check.

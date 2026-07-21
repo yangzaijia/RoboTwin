@@ -153,3 +153,10 @@
 - OursV2 使用同一 Piper `urdfik` 后端，不是另一套 canonical IK；`execute_partial_cartesian_plan=0`，也没有跳过失败关键点。
 - 该历史结果把 `reach_rot_tol_deg` 和 `urdfik_max_rotation_threshold_rad` 分别放宽到 `180°` 与 `3.14 rad`。pregrasp/grasp/action 的双臂旋转误差实际约 `178--180°`，仍被标为 reached，因而继续 close/action。
 - 新 V8 比较保持 `30°` reach 门限并原样保存失败；不复用 OursV2 的宽松姿态门限。
+
+## 离线夹爪投影全部跑到画面外
+
+- 症状：`debug_execution_metrics.jsonl` 中 target/actual 位姿数值合理，原视频目标轴也可见，但离线画出的 C 形夹爪消失或投到数千像素外。
+- 原因：metrics 保存的是 SAPIEN camera entity pose；本项目该 pose 使用 local `+X` forward、`+Y` left、`+Z` up。它不是 `camera.get_model_matrix()` 的 OpenGL `-Z` forward 矩阵。
+- 修复：先把 world point 变换到 entity local，再按 `OpenCV right=-local Y, down=-local Z, forward=local X` 投影。不得直接复用对 `get_model_matrix()` 使用的 `[x,-y,-z]` 转换。
+- 验证：目标 C-gripper 应与原视频的 SAPIEN target-axis actor 同中心；`pick_diverse_bottles/id0` KF38/KF78 到位图已完成原分辨率视觉核对。

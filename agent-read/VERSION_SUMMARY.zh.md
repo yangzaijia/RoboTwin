@@ -93,3 +93,7 @@ O.2 是 O.1.2 Foundation IK 的任务扩展，不改变 V1-V4 IK 语义。新增
 ### 2026-07-17：Calibrated camera-mount-up V5（v1.x 修正）
 
 V4 的 local-X-up 判据被 0515 相机外参推翻；正式 mount-up 改为 local `-X` 朝 world `+Z`。新增向后兼容的 top-axis sign、Curobo→SAPIEN link6 adapter、复用-preview 手动 candidate 修正、40-waypoint 透传、joint-continuity wrapper 参数和逐关节 settle miss 诊断。`pick_diverse_bottles/id0` 的 Orientation/Fused 与 constrained Top-score 均完整执行，输出隔离到 `v5_camera_mount_up_candidate_videos`；OursV2/V4 不修改。该 V5 关闭物体碰撞，只用于定性 retargeting 验证。
+
+### 2026-07-21：V8 执行姿态审计（v1.x 增量）
+
+不修改候选选择、IK 或 OursV2。新增只读视频审计，将 V8 的精确候选 ID、彩色目标 C-gripper、白色实测 EE 和物理 Piper 红 `+X`/绿 `+Y`/蓝 `+Z` 轴同时叠加到原执行视频，并在到位帧保持 1 秒。审计同时记录 Top-score K1 右手 `33.22°` 失配与 K2 未执行，避免将历史 `legacy_v3` 候选图误当为 V8 视频的精确对应图。

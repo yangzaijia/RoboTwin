@@ -93,3 +93,7 @@ This does not promote a major version or modify OursV2/V3 outputs. The AnyGrasp 
 ### 2026-07-17: calibrated camera-mount-up V5 (v1.x correction)
 
 The 0515 camera extrinsics invalidate V4's local-X-up criterion; formal mount-up is now link6 local `-X` toward world `+Z`. This backward-compatible correction adds top-axis sign, the Curobo-to-SAPIEN link6 adapter, reuse-preview manual-candidate handling, correct 40-waypoint propagation, a joint-continuity wrapper option, and per-joint settle-miss diagnostics. Orientation/Fused and constrained Top-score complete `pick_diverse_bottles/id0` in isolated `v5_camera_mount_up_candidate_videos`; OursV2 and V4 remain unchanged. Object collisions are disabled, so V5 is qualitative retargeting validation only.
+
+### 2026-07-21: V8 execution-pose audit (v1.x increment)
+
+Candidate selection, IK, and OursV2 remain unchanged. A read-only video audit now overlays the exact V8 candidate IDs, colored target C-grippers, white measured EEs, and physical Piper red `+X`/green `+Y`/blue `+Z` axes on the original execution video, with one-second arrival holds. It records the Top-score K1 right-arm `33.22 deg` miss and the unexecuted K2 explicitly, preventing historical `legacy_v3` candidate images from being mistaken for candidate-exact matches to the V8 video.

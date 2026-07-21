@@ -3443,3 +3443,12 @@ Validation: the updated formal dry-run again passes exactly 12 episodes/38 frame
 - Formal publication completed at `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`. The twelve videos moved successfully and their former structured paths are now valid absolute symbolic links. All 38 images and videos use flat `{task}_{id}_...` names, naturally grouping each episode.
 
 Validation: an independent audit confirms exactly 52 regular files (12 MP4 + 38 PNG + README + manifest) and zero subdirectories. Every PNG is 1920x1152. All twelve MP4s are H.264/yuv420p, 1280x796 at 30 FPS and pass complete FFmpeg decoding. All twelve former paths resolve to the new files. Original-resolution visual QA passes for formal dual-arm `pick_diverse_bottles/id0/frame38` and single-arm `handover_bottle/id1/frame39` sheets.
+
+## 2026-07-21 (V8 video target/actual-EE pose audit)
+
+- Confirmed that the two legacy V3 sheets for `pick_diverse_bottles/id0` are not candidate-for-candidate matches for the V8 video. Only frame-38 Orientation/Fused matches; frame 78 and the Top-score selections differ by version.
+- Added `overlay_v8_execution_pose_audit.py`, which projects the exact V8 IK target (colored C-gripper plus XYZ) and measured EE (white C-gripper) directly from each plan summary and per-frame execution metrics, without reusing legacy image selections.
+- Added a one-second arrival hold at each grasp/action terminal frame with per-arm PASS/FAIL, position, and rotation errors. Missing action stages show `NOT EXECUTED`; Top-score frame 78 is never fabricated.
+- Fixed offline projection across the SAPIEN entity-camera `+X`-forward versus OpenGL model-matrix `-Z`-forward boundary. The flat README and manifest now register the three supplemental files.
+
+Validation: Python `py_compile`, a formal-argument dry run, complete decode of all three 640x480/10-FPS overlays, complete decode of the final H.264/yuv420p 1280x796/30-FPS/21.4-second grid, 1920x1152 arrival-sheet geometry, and original-resolution KF38/KF78 visual QA all pass. Top-score KF38 is left PASS `4.3 mm/0.2 deg`, right FAIL `3.5 mm/33.2 deg`; Orientation/Fused pass both arms at KF38 and KF78.

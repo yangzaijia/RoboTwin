@@ -133,3 +133,38 @@ The six-panel compatibility layer `export_keyframe_candidate_comparison_v3_activ
 Per-frame target objects come from that frame's V8 `object_distance_debug.json`. The publisher uses the configured `arm_target_mapping` target when its candidate partition is nonempty. If that target has no candidate and exactly one nonempty object partition remains, the sole available object is used and `sole_available_object_fallback`, the configured target, and the reason are recorded in both config and `flat_manifest.json`. A legacy V3 metadata candidate index must never be looked up in the V8 pool: candidate frames and indices are not stable across those versions. Ambiguous multi-object cases fail instead of guessing.
 
 The formal publication is complete. The flat directory contains 12 MP4s, 38 PNGs at 1920x1152, `README.md`, and `flat_manifest.json`, with no subdirectories. All twelve former structured MP4 paths are valid absolute symbolic links to the flat files.
+
+## V8 IK-target versus actual-EE audit video
+
+Legacy `*_strategies_2x3_legacy_v3.png` files use the V3 canonical reranker and are not candidate-for-candidate matches for V8 execution videos. `overlay_v8_execution_pose_audit.py` reads each V8 planner's `plan_summary.json` and `debug_execution_metrics.jsonl` directly. A colored C-gripper is the exact per-frame IK target; a white C-gripper is the measured EE. Target axes are red `+X` physical forward, green `+Y` opening, and blue `+Z` normal. The final grasp/action frame receives a one-second arrival hold with per-arm PASS/FAIL and errors.
+
+Parameter template (not directly runnable):
+
+```bash
+python code_painting/overlay_v8_execution_pose_audit.py \
+  --task <TASK> --episode-id <ID> \
+  --method orientation=<ORIENTATION_PLAN_SUMMARY> \
+  --method fused=<FUSED_PLAN_SUMMARY> \
+  --method top_score=<TOPSCORE_PLAN_SUMMARY> \
+  --ours-video <OURS_V2_VIDEO> \
+  --asset-root <PAPER_ASSET_ROOT> \
+  --work-output-dir <AUDIT_WORK_DIR> \
+  --flat-output-dir <FLAT_RELEASE_DIR>
+```
+
+Runnable `pick_diverse_bottles/id0` example:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python code_painting/overlay_v8_execution_pose_audit.py \
+  --task pick_diverse_bottles --episode-id 0 \
+  --method orientation=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_orientation/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method fused=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_fused/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method top_score=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_topscore/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --ours-video /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/L16_de_human_replay_clean_right_cam/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4 \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --work-output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_execution_pose_audit_20260721/pick_diverse_bottles/id0 \
+  --flat-output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721
+```
+
+The candidates differ in this episode. At frame 38, the V3 image uses Orientation/Fused `L16/R5` and Top-score `L0/R3`, while frame 78 uses Orientation/Fused `L3/R10` and Top-score `L0/R1`. The V8 video uses Orientation/Fused `L16/R5`, then `L14/R16`, and Top-score `L8/R3`, then `L3/R2`. The legacy images therefore describe an older canonical selection, not the V8 execution orientation.

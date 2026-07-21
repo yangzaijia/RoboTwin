@@ -133,3 +133,38 @@ python code_painting/publish_v8_flat_qualitative_assets.py --move-videos
 每帧目标物体以该帧 V8 `object_distance_debug.json` 为准。若 `arm_target_mapping` 指定的物体在当前候选分区中存在，就直接使用；若指定物体没有任何候选且全帧只剩一个非空物体分区，则使用这个唯一可用物体，并在配置和 `flat_manifest.json` 中记录 `sole_available_object_fallback`、原目标和原因。禁止用旧 V3 metadata 的 candidate index 反查 V8 候选池：两版候选帧和编号并不稳定，跨版本编号没有对应关系。若存在多个可用物体但无法唯一解析，发布应立即失败而不是猜测。
 
 正式发布已完成：扁平目录包含 12 个 MP4、38 个 1920×1152 PNG、`README.md` 和 `flat_manifest.json`，没有子目录。旧的 12 个结构化 MP4 路径均为指向扁平文件的有效绝对符号链接。
+
+## V8 目标姿态与实际 EE 审计视频
+
+旧 `*_strategies_2x3_legacy_v3.png` 使用 V3 canonical rerank，不能与 V8 视频逐候选比较。`overlay_v8_execution_pose_audit.py` 直接读取每个 V8 planner 的 `plan_summary.json` 和 `debug_execution_metrics.jsonl`：彩色 C-gripper 是该帧真正的 IK target，白色 C-gripper 是实际 EE；目标轴为红 `+X` physical forward、绿 `+Y` opening、蓝 `+Z` normal。grasp/action 末帧插入 1 秒 arrival hold，并逐手显示 PASS/FAIL 和误差。
+
+参数模板（不可直接运行）：
+
+```bash
+python code_painting/overlay_v8_execution_pose_audit.py \
+  --task <TASK> --episode-id <ID> \
+  --method orientation=<ORIENTATION_PLAN_SUMMARY> \
+  --method fused=<FUSED_PLAN_SUMMARY> \
+  --method top_score=<TOPSCORE_PLAN_SUMMARY> \
+  --ours-video <OURS_V2_VIDEO> \
+  --asset-root <PAPER_ASSET_ROOT> \
+  --work-output-dir <AUDIT_WORK_DIR> \
+  --flat-output-dir <FLAT_RELEASE_DIR>
+```
+
+`pick_diverse_bottles/id0` 可运行示例：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python code_painting/overlay_v8_execution_pose_audit.py \
+  --task pick_diverse_bottles --episode-id 0 \
+  --method orientation=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_orientation/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method fused=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_fused/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method top_score=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_topscore/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --ours-video /home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/L16_de_human_replay_clean_right_cam/pick_diverse_bottles/foundation_input_0/head_cam_plan.mp4 \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --work-output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_execution_pose_audit_20260721/pick_diverse_bottles/id0 \
+  --flat-output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721
+```
+
+该集候选并不一致：V3 图片在 frame38 为 Orientation/Fused `L16/R5`、Top-score `L0/R3`，frame78 为 Orientation/Fused `L3/R10`、Top-score `L0/R1`；V8 视频分别为 Orientation/Fused `L16/R5`、`L14/R16`，Top-score `L8/R3`、`L3/R2`。因此旧图片只能说明旧 canonical 选择，不能解释 V8 执行朝向。
