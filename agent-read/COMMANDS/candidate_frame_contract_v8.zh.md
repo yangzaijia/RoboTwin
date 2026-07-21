@@ -131,3 +131,5 @@ python code_painting/publish_v8_flat_qualitative_assets.py --move-videos
 六格兼容层 `export_keyframe_candidate_comparison_v3_active_arms.py` 从真实 OursV2 metadata 推导 active arms。单手帧只绘制 LEFT 或 RIGHT，双手帧绘制 BOTH；不得为了满足旧导出器的固定双手假设而复制或伪造 inactive hand。旧 metadata 缺少 Orientation/Fused 时，只对真实 active hand 用同一 V3 approach-axis 评分重建对应策略记录。
 
 每帧目标物体以该帧 V8 `object_distance_debug.json` 为准。若 `arm_target_mapping` 指定的物体在当前候选分区中存在，就直接使用；若指定物体没有任何候选且全帧只剩一个非空物体分区，则使用这个唯一可用物体，并在配置和 `flat_manifest.json` 中记录 `sole_available_object_fallback`、原目标和原因。禁止用旧 V3 metadata 的 candidate index 反查 V8 候选池：两版候选帧和编号并不稳定，跨版本编号没有对应关系。若存在多个可用物体但无法唯一解析，发布应立即失败而不是猜测。
+
+正式发布已完成：扁平目录包含 12 个 MP4、38 个 1920×1152 PNG、`README.md` 和 `flat_manifest.json`，没有子目录。旧的 12 个结构化 MP4 路径均为指向扁平文件的有效绝对符号链接。

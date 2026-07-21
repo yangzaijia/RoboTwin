@@ -3437,3 +3437,7 @@ Validation: 本地/远端 `py_compile` 通过；正式参数 dry-run 精确发�
 - 发布器改为逐帧读取 V8 `arm_target_mapping` 与 `object_partition_counts`：正常使用有候选的配置目标；配置目标为空且只有一个非空分区时，显式记录 `sole_available_object_fallback`；多物体歧义仍 fail-fast。
 
 Validation: 更新后正式参数 dry-run 再次精确通过 12 episode/38 frame；`place_bread_basket/id0/frame64` 隔离 smoke 解析 active arm=`left`、target `basket→bread`（13 candidates），生成 1920×1152 六格图，原分辨率视觉 QA 确认只画 LEFT 且六格布局完整。正式移动与全集审计仍待执行。
+
+- 正式发布完成到 `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`。12 个视频已移动，旧结构化路径改为有效绝对符号链接；38 张图和视频按 `{task}_{id}_...` 扁平命名，同 episode 自然相邻。
+
+Validation: 独立审计确认目录只有 52 个普通文件（12 MP4 + 38 PNG + README + manifest）、0 子目录；38 PNG 均为 1920×1152；12 MP4 均为 H.264/yuv420p、1280×796、30 FPS 并通过完整 FFmpeg 解码；12 个旧路径均 resolve 到新文件。正式双手 `pick_diverse_bottles/id0/frame38` 与单手 `handover_bottle/id1/frame39` 原图视觉 QA 通过。

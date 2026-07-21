@@ -3439,3 +3439,7 @@ Validation: local and remote `py_compile` pass. The formal dry-run finds exactly
 - The publisher now resolves each frame from V8 `arm_target_mapping` plus `object_partition_counts`: it uses a configured target with candidates, explicitly records `sole_available_object_fallback` when the configured partition is empty and only one nonempty partition exists, and still fails fast on ambiguous multi-object cases.
 
 Validation: the updated formal dry-run again passes exactly 12 episodes/38 frames. An isolated `place_bread_basket/id0/frame64` smoke resolves active arm=`left`, target `basket→bread` (13 candidates), produces a 1920x1152 sheet, and original-resolution visual QA confirms LEFT-only rendering and the complete six-panel layout. Formal movement and full-release audit remain pending.
+
+- Formal publication completed at `/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_6x2_flat_release_20260721/`. The twelve videos moved successfully and their former structured paths are now valid absolute symbolic links. All 38 images and videos use flat `{task}_{id}_...` names, naturally grouping each episode.
+
+Validation: an independent audit confirms exactly 52 regular files (12 MP4 + 38 PNG + README + manifest) and zero subdirectories. Every PNG is 1920x1152. All twelve MP4s are H.264/yuv420p, 1280x796 at 30 FPS and pass complete FFmpeg decoding. All twelve former paths resolve to the new files. Original-resolution visual QA passes for formal dual-arm `pick_diverse_bottles/id0/frame38` and single-arm `handover_bottle/id1/frame39` sheets.
