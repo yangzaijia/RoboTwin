@@ -3432,3 +3432,8 @@ Validation: 本地/远端 `bash -n`、Python `py_compile` 和三分支状态标�
 - 首次正式发布在第一张单手图安全退出：旧 V3 导出器硬编码要求左右手。新增 active-arm 兼容层，以 OursV2 metadata 为真值；单手只绘制真实手，双手绘制 BOTH，旧 metadata 缺失的 Orientation/Fused 只对 active hand 重建。
 
 Validation: 本地/远端 `py_compile` 通过；正式参数 dry-run 精确发现 12 episode/38 frame，所有 metadata/raw grasp/object-debug/video 输入有效且未创建输出目录；双手 `pick_diverse_bottles/id0/frame38` smoke 为 1920×1152，选择 Orientation/Fused `L16/R5`、Top-score `L0/R3`；单手 `handover_bottle/id1/frame39` smoke 同为 1920×1152，selection metadata 只有 right，视觉 QA 标题为 RIGHT 且未绘制左手。首次正式 attempt 在移动视频前退出，未留下发布目录。正式发布、全部 PNG 和 12 MP4 审计待重试。
+
+- 第二次正式 attempt 在 `place_bread_basket/id0/frame64` 安全退出：静态 left→basket 映射与该交互帧实际只有 bread 候选不一致；发布目录未创建，视频未移动。排查同时确认旧 V3 Top-score candidate index 不能映射到 V8 候选池，因候选帧/编号来自不同版本。
+- 发布器改为逐帧读取 V8 `arm_target_mapping` 与 `object_partition_counts`：正常使用有候选的配置目标；配置目标为空且只有一个非空分区时，显式记录 `sole_available_object_fallback`；多物体歧义仍 fail-fast。
+
+Validation: 更新后正式参数 dry-run 再次精确通过 12 episode/38 frame；`place_bread_basket/id0/frame64` 隔离 smoke 解析 active arm=`left`、target `basket→bread`（13 candidates），生成 1920×1152 六格图，原分辨率视觉 QA 确认只画 LEFT 且六格布局完整。正式移动与全集审计仍待执行。

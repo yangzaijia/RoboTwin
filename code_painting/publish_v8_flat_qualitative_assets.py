@@ -33,18 +33,6 @@ EPISODES = (
     ("stack_cups", 1),
 )
 
-TARGET_OBJECTS = {
-    "handover_bottle": {"left": "right_bottle", "right": "right_bottle"},
-    "pick_diverse_bottles": {"left": "left_bottle", "right": "right_bottle"},
-    "place_bread_basket": {"left": "basket", "right": "bread"},
-    "pnp_bread": {"left": "left_bread", "right": "right_bread"},
-    "pnp_tray": {"left": "left_dark_red_cup", "right": "right_bottle"},
-    "stack_cups": {
-        "left": "left_light_pink_cup",
-        "right": "right_dark_red_cup",
-    },
-}
-
 FRAME_RE = re.compile(r"_keyframe_(\d{6})_metadata\.json$")
 
 
@@ -218,6 +206,45 @@ def exporter_config(
     )
     if not active:
         raise ValueError(f"no active OursV2 arm in {record['metadata_path']}")
+    object_debug = json.loads(record["object_debug_json"].read_text(encoding="utf-8"))
+    configured_targets = {
+        str(arm): str(target)
+        for arm, target in object_debug.get("arm_target_mapping", {}).items()
+    }
+    partition_counts = {
+        str(name): int(count)
+        for name, count in object_debug.get("object_partition_counts", {}).items()
+        if int(count) > 0
+    }
+    available_objects = tuple(sorted(partition_counts))
+    target_objects: dict[str, str] = {}
+    target_object_resolution: dict[str, dict[str, Any]] = {}
+    for arm in active:
+        configured = configured_targets.get(arm)
+        if configured and partition_counts.get(configured, 0) > 0:
+            resolved = configured
+            source = "v8_arm_target_mapping"
+            fallback_reason = None
+        elif len(available_objects) == 1:
+            resolved = available_objects[0]
+            source = "sole_available_object_fallback"
+            fallback_reason = (
+                f"configured target {configured!r} has no candidates at this keyframe"
+            )
+        else:
+            raise ValueError(
+                f"cannot resolve target object for {arm}: configured={configured!r}, "
+                f"available={list(available_objects)} in "
+                f"{record['object_debug_json']}"
+            )
+        target_objects[arm] = resolved
+        target_object_resolution[arm] = {
+            "configured_target": configured,
+            "resolved_target": resolved,
+            "source": source,
+            "fallback_reason": fallback_reason,
+            "candidate_count": partition_counts[resolved],
+        }
     return {
         "schema_version": 1,
         "robotwin_root": str(args.robotwin_root),
@@ -231,7 +258,8 @@ def exporter_config(
         "orientation_metric": "approach_axis",
         "max_orientation_error_deg": 90.0,
         "active_arms": list(active),
-        "target_objects": TARGET_OBJECTS[task],
+        "target_objects": target_objects,
+        "target_object_resolution": target_object_resolution,
         "weights": {"anygrasp": 0.25, "orientation": 0.75},
         "render": {
             "axis_length_m": 0.045,
@@ -273,6 +301,9 @@ def main() -> int:
     args.output_root = args.output_root.expanduser().resolve()
     episodes = discover(args)
     validate_inputs(episodes)
+    for episode in episodes:
+        for record in episode["frames"]:
+            exporter_config(args, episode, record, Path("/dry-run/unused"))
     frame_count = sum(len(episode["frames"]) for episode in episodes)
     print(f"Episodes: {len(episodes)}")
     print(f"Keyframe sheets: {frame_count}")
@@ -342,6 +373,10 @@ def main() -> int:
                             "sha256": sha256(flat_path),
                             "semantics": "legacy_v3_canonical_approach_axis",
                             "active_arms": config["active_arms"],
+                            "target_objects": config["target_objects"],
+                            "target_object_resolution": config[
+                                "target_object_resolution"
+                            ],
                             "sources": {
                                 "metadata": str(record["metadata_path"]),
                                 "raw_grasp": str(record["raw_grasp_json"]),
