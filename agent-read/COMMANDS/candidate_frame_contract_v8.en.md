@@ -168,3 +168,42 @@ cd /home/zaijia001/ssd/RoboTwin && \
 ```
 
 The candidates differ in this episode. At frame 38, the V3 image uses Orientation/Fused `L16/R5` and Top-score `L0/R3`, while frame 78 uses Orientation/Fused `L3/R10` and Top-score `L0/R1`. The V8 video uses Orientation/Fused `L16/R5`, then `L14/R16`, and Top-score `L8/R3`, then `L3/R2`. The legacy images therefore describe an older canonical selection, not the V8 execution orientation.
+
+## D435 candidate sheets matched exactly to the V8 video
+
+`export_v8_video_matched_candidate_contact_sheets.py` reads the three V8 video `plan_summary.json` files directly. Orientation, Fused, and Top-score panels use the saved final `pose_world_wxyz`, after physical-axis remap, camera-up branch selection, and the configured candidate target offset, but before IK. Red `+X` is Piper forward, green `+Y` is opening, and blue `+Z` is the gripper-plane normal/camera-back direction. The OursV2 panel explicitly keeps the native canonical `+Z`-forward human target as a reference and never relabels it as a V8 AnyGrasp candidate.
+
+Parameter template (not directly runnable):
+
+```bash
+python code_painting/export_v8_video_matched_candidate_contact_sheets.py \
+  --task <TASK> --episode-id <ID> \
+  --keyframe <FRAME> [--keyframe <FRAME> ...] \
+  --method orientation=<ORIENTATION_PLAN_SUMMARY> \
+  --method fused=<FUSED_PLAN_SUMMARY> \
+  --method top_score=<TOPSCORE_PLAN_SUMMARY> \
+  --metadata <FRAME>=<SELECTION_METADATA_JSON> \
+  --robotwin-root <ROBOTWIN_ROOT> --asset-root <PAPER_ASSET_ROOT> \
+  --output-dir <WORK_OUTPUT_DIR> [--publish-dir <MATCHED_RELEASE_DIR>] \
+  [--dry-run] [--overwrite]
+```
+
+Runnable `pick_diverse_bottles/id0` example:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python code_painting/export_v8_video_matched_candidate_contact_sheets.py \
+  --task pick_diverse_bottles --episode-id 0 --keyframe 38 --keyframe 78 \
+  --method orientation=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_orientation/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method fused=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_fused/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method top_score=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_topscore/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --metadata 38=/home/zaijia001/ssd/RoboTwin/code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000038_metadata.json \
+  --metadata 78=/home/zaijia001/ssd/RoboTwin/code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000078_metadata.json \
+  --robotwin-root /home/zaijia001/ssd/RoboTwin \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_video_matched_candidate_sheets_20260722/pick_diverse_bottles/id0 \
+  --publish-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722 \
+  --overwrite
+```
+
+The six panels are the V8 physical target pool, Orientation, Fused, Top-score, the OursV2 human-target reference, and an all-method overlay. This sheet answers “which gripper target did the video plan?” The separate `*_video_matched_arrivals_2x3.png` answers “where did the robot actually arrive?” and must not be conflated with the candidate sheet.

@@ -97,3 +97,7 @@ The 0515 camera extrinsics invalidate V4's local-X-up criterion; formal mount-up
 ### 2026-07-21: V8 execution-pose audit (v1.x increment)
 
 Candidate selection, IK, and OursV2 remain unchanged. A read-only video audit now overlays the exact V8 candidate IDs, colored target C-grippers, white measured EEs, and physical Piper red `+X`/green `+Y`/blue `+Z` axes on the original execution video, with one-second arrival holds. It records the Top-score K1 right-arm `33.22 deg` miss and the unexecuted K2 explicitly, preventing historical `legacy_v3` candidate images from being mistaken for candidate-exact matches to the V8 video.
+
+### 2026-07-22: V8 video-matched candidate sheets (v1.x increment)
+
+V8 planning and OursV2 remain unchanged. A read-only D435/Foundation six-panel exporter now consumes the final candidate targets from V8 plan summaries directly and preserves physical Piper red `+X` forward, green `+Y` opening, and blue `+Z` normal semantics. Candidate sheets and measured-EE arrival sheets are stored separately to answer “what was planned?” and “where did execution arrive?” respectively.

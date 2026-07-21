@@ -3452,3 +3452,11 @@ Validation: an independent audit confirms exactly 52 regular files (12 MP4 + 38 
 - Fixed offline projection across the SAPIEN entity-camera `+X`-forward versus OpenGL model-matrix `-Z`-forward boundary. The flat README and manifest now register the three supplemental files.
 
 Validation: Python `py_compile`, a formal-argument dry run, complete decode of all three 640x480/10-FPS overlays, complete decode of the final H.264/yuv420p 1280x796/30-FPS/21.4-second grid, 1920x1152 arrival-sheet geometry, and original-resolution KF38/KF78 visual QA all pass. Top-score KF38 is left PASS `4.3 mm/0.2 deg`, right FAIL `3.5 mm/33.2 deg`; Orientation/Fused pass both arms at KF38 and KF78.
+
+## 2026-07-22 (V8 video-matched candidate contact sheets)
+
+- Added read-only `export_v8_video_matched_candidate_contact_sheets.py`. It never invokes IK or reselects candidates; it reads final `pose_world_wxyz` values directly from the Orientation/Fused/Top-score V8 plan summaries and projects them onto their D435/Foundation images.
+- Frame 38 uses Orientation/Fused `L16/R5` and Top-score `L8/R3`; frame 78 uses Orientation/Fused `L14/R16` and Top-score `L3/R2`. OursV2 remains a clearly labeled native-canonical human-target reference.
+- Two 1920x1152 sheets are published under `matched_candidate_image_video_release_20260722/` with names distinct from the arrival sheet. The candidate sheets show planned V8 targets; the arrival sheet compares target and measured EE.
+
+Validation: `py_compile` and the formal-argument dry run pass. Both outputs are 1920x1152 RGB PNGs; the manifest parses as JSON; candidate IDs match all three plan summaries exactly; original-resolution frame-38/frame-78 visual QA passes with physical red `+X` forward, green `+Y` opening, and blue `+Z` normal axes.

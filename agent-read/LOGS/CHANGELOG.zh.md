@@ -3450,3 +3450,11 @@ Validation: 独立审计确认目录只有 52 个普通文件（12 MP4 + 38 PNG 
 - 离线投影修复 SAPIEN entity camera `+X` forward 与 OpenGL model matrix `-Z` forward 的差异；扁平 README/manifest 已登记三个补充文件。
 
 Validation: Python `py_compile`、正式参数 dry-run、三路 640×480/10 FPS overlay 完整解码、最终 H.264/yuv420p 1280×796/30 FPS/21.4 秒完整解码、1920×1152 arrival sheet 尺寸、KF38/KF78 原分辨率视觉 QA 均通过。Top-score KF38 的真实状态为 left PASS `4.3 mm/0.2°`、right FAIL `3.5 mm/33.2°`；Orientation/Fused 的 KF38/KF78 均双手 PASS。
+
+## 2026-07-22（V8 视频严格匹配的候选六格图）
+
+- 新增只读 `export_v8_video_matched_candidate_contact_sheets.py`，不调用 IK、不重选候选；直接读取 Orientation/Fused/Top-score V8 plan summary 的最终 `pose_world_wxyz`，投影到对应 D435/Foundation 图像。
+- frame38 使用 Orientation/Fused `L16/R5`、Top-score `L8/R3`；frame78 使用 Orientation/Fused `L14/R16`、Top-score `L3/R2`。OursV2 保留 native canonical human target 并明确标注为 reference。
+- 两张 1920×1152 六格图发布到 `matched_candidate_image_video_release_20260722/`，并与到位图分开命名；前者表示规划前的 V8 candidate target，后者表示目标/实测 EE 到位对照。
+
+Validation: `py_compile` 与正式参数 dry run 通过；两张图均为 1920×1152 RGB PNG；manifest JSON 通过解析；候选编号与三份 plan summary 逐项一致；frame38/frame78 原分辨率视觉 QA 通过，物理轴为红 `+X` forward、绿 `+Y` opening、蓝 `+Z` normal。

@@ -168,3 +168,42 @@ cd /home/zaijia001/ssd/RoboTwin && \
 ```
 
 该集候选并不一致：V3 图片在 frame38 为 Orientation/Fused `L16/R5`、Top-score `L0/R3`，frame78 为 Orientation/Fused `L3/R10`、Top-score `L0/R1`；V8 视频分别为 Orientation/Fused `L16/R5`、`L14/R16`，Top-score `L8/R3`、`L3/R2`。因此旧图片只能说明旧 canonical 选择，不能解释 V8 执行朝向。
+
+## V8 视频严格匹配的 D435 候选六格图
+
+`export_v8_video_matched_candidate_contact_sheets.py` 直接读取三种 V8 视频的 `plan_summary.json`。Orientation、Fused、Top-score 面板使用其中保存的最终 `pose_world_wxyz`：它已包含 physical-axis remap、camera-up 分支与配置的 candidate target offset，但尚未进入 IK。红 `+X` 是 Piper 前进轴，绿 `+Y` 是开合方向，蓝 `+Z` 是夹爪平面法向/相机背面方向。OursV2 面板明确保留原 native canonical `+Z`-forward human target，只作为参考，不伪装成 V8 AnyGrasp 候选。
+
+参数模板（不可直接运行）：
+
+```bash
+python code_painting/export_v8_video_matched_candidate_contact_sheets.py \
+  --task <TASK> --episode-id <ID> \
+  --keyframe <FRAME> [--keyframe <FRAME> ...] \
+  --method orientation=<ORIENTATION_PLAN_SUMMARY> \
+  --method fused=<FUSED_PLAN_SUMMARY> \
+  --method top_score=<TOPSCORE_PLAN_SUMMARY> \
+  --metadata <FRAME>=<SELECTION_METADATA_JSON> \
+  --robotwin-root <ROBOTWIN_ROOT> --asset-root <PAPER_ASSET_ROOT> \
+  --output-dir <WORK_OUTPUT_DIR> [--publish-dir <MATCHED_RELEASE_DIR>] \
+  [--dry-run] [--overwrite]
+```
+
+`pick_diverse_bottles/id0` 可运行示例：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin && \
+/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python code_painting/export_v8_video_matched_candidate_contact_sheets.py \
+  --task pick_diverse_bottles --episode-id 0 --keyframe 38 --keyframe 78 \
+  --method orientation=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_orientation/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method fused=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_fused/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --method top_score=/home/zaijia001/ssd/RoboTwin/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v8_physical_axes_raw_batch_6x2_20260720_topscore/pick_diverse_bottles/foundation_input_0/plan_summary.json \
+  --metadata 38=/home/zaijia001/ssd/RoboTwin/code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000038_metadata.json \
+  --metadata 78=/home/zaijia001/ssd/RoboTwin/code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000078_metadata.json \
+  --robotwin-root /home/zaijia001/ssd/RoboTwin \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/v8_video_matched_candidate_sheets_20260722/pick_diverse_bottles/id0 \
+  --publish-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722 \
+  --overwrite
+```
+
+六格依次是 V8 physical target pool、Orientation、Fused、Top-score、OursV2 human-target reference、全部方法叠加。该图回答“视频计划了哪个夹爪 target”；`*_video_matched_arrivals_2x3.png` 回答“机器人实际到位到哪里”，两者不可混为一张图。

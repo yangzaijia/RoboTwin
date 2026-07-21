@@ -97,3 +97,7 @@ V4 的 local-X-up 判据被 0515 相机外参推翻；正式 mount-up 改为 loc
 ### 2026-07-21：V8 执行姿态审计（v1.x 增量）
 
 不修改候选选择、IK 或 OursV2。新增只读视频审计，将 V8 的精确候选 ID、彩色目标 C-gripper、白色实测 EE 和物理 Piper 红 `+X`/绿 `+Y`/蓝 `+Z` 轴同时叠加到原执行视频，并在到位帧保持 1 秒。审计同时记录 Top-score K1 右手 `33.22°` 失配与 K2 未执行，避免将历史 `legacy_v3` 候选图误当为 V8 视频的精确对应图。
+
+### 2026-07-22：V8 视频匹配候选六格图（v1.x 增量）
+
+不修改 V8 规划或 OursV2。新增只读 D435/Foundation 六格导出器，直接使用 V8 plan summary 的最终 candidate target，保留物理 Piper 红 `+X` forward、绿 `+Y` opening、蓝 `+Z` normal 语义。候选图与实际 EE arrival 图分开保存，分别回答“规划了什么”和“执行到哪里”。
