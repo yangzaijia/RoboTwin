@@ -24,19 +24,56 @@ bash code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
   --run-tag v9_ee_rigid_object_transport_20260723
 ```
 
-## Export the six-panel transform audit
+## Export four method-specific six-panel transform audits
+
+Orientation, Fused, and Top-score each read their own V9 `plan_summary.json`. OursV2 reads the historical human-replay summary with `--pipeline-kind oursv2_historical`; it is never depicted as an AnyGrasp remap.
 
 ```bash
 cd /home/zaijia001/ssd/RoboTwin
-/home/zaijia001/ssd/miniconda3/bin/conda run -n RoboTwin_bw \
-python code_painting/export_v9_candidate_to_robotwin_transform_audit.py \
+OUT=/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
+ROOT=code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes
+K1=code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000038_metadata.json
+K2=code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000078_metadata.json
+PY="/home/zaijia001/ssd/miniconda3/bin/conda run -n RoboTwin_bw python"
+
+for spec in \
+  "orientation Orientation 04a_orientation" \
+  "fused Fused 04b_fused" \
+  "topscore Top-score 04c_topscore"
+do
+  set -- $spec
+  strategy=$1
+  label=$2
+  stem=$3
+  $PY code_painting/export_v9_candidate_to_robotwin_transform_audit.py \
+    --robotwin-root /home/zaijia001/ssd/RoboTwin \
+    --plan-summary "$ROOT/paper_v9_ee_rigid_object_transport_20260723_${strategy}/pick_diverse_bottles/foundation_input_0/plan_summary.json" \
+    --metadata-k1 "$K1" \
+    --metadata-k2 "$K2" \
+    --method-label "$label" \
+    --pipeline-kind anygrasp_v9 \
+    --output "$OUT/v9_pick_diverse_bottles_0_${stem}_candidate_to_robotwin_transform_2x3.png"
+done
+
+$PY code_painting/export_v9_candidate_to_robotwin_transform_audit.py \
   --robotwin-root /home/zaijia001/ssd/RoboTwin \
-  --plan-summary code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes/paper_v9_ee_rigid_object_transport_20260723_orientation/pick_diverse_bottles/foundation_input_0/plan_summary.json \
-  --metadata-k1 code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000038_metadata.json \
-  --metadata-k2 code_painting/selection_strategy_compare_v4/pick_diverse_bottles/id0_keyframe_000078_metadata.json \
-  --method-label orientation \
-  --output /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9_pick_diverse_bottles_0_04_candidate_to_robotwin_transform_2x3.png
+  --plan-summary "$ROOT/L16_de_human_replay_clean_right_cam/pick_diverse_bottles/foundation_input_0/plan_summary.json" \
+  --metadata-k1 "$K1" \
+  --metadata-k2 "$K2" \
+  --method-label OursV2 \
+  --pipeline-kind oursv2_historical \
+  --output "$OUT/v9_pick_diverse_bottles_0_04d_oursv2_human_target_to_robotwin_2x3.png"
 ```
+
+Each PNG has a same-stem JSON recording source summary/metadata hashes, K1/K2 IDs, pipeline kind, and whether K2 really executed. Top-score currently marks panel six `NOT EXECUTED`; no missing rigid target is fabricated.
+
+## Current IK/TCP semantics
+
+- V9 uses `robot_config_PiperPika_agx_dual_table_0515.json` and Piper URDFIK. It belongs to the OursV2/0515 12 cm configuration family and does not use `T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)`.
+- `_trans_from_gripper_to_endlink` translates by `0.12-gripper_bias`; with `gripper_bias=0.12`, the extra translation into link6 IK is `0`.
+- Runner `--approach_offset_m 0.12` is pregrasp-only. The final grasp target does not retain that 12 cm separation.
+- `--candidate_target_local_x_offset_m -0.05` constructs an AnyGrasp target along physical `local +X`; it is not a TCP length.
+- V9 rigid K2 targets the EE/link6 origin while interpreting orientation as the physical Piper gripper axes.
 
 ## Compose the 2x2 video
 

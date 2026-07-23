@@ -3467,3 +3467,12 @@ Validation: `py_compile` 与正式参数 dry run 通过；两张图均为 1920×
 - 新增六联转换图导出器、单 episode V9 runner 与 2×2 合成器；最终图片/视频发布到 `matched_candidate_image_video_release_20260722/`，V8 文件未覆盖。
 
 Validation: `py_compile`、`bash -n`、三策略 dry run 与实跑通过；V9 K1 target 相对 V8 最大绝对差为 `0.0`。Orientation/Fused action 双臂到位，最终 object 对 Foundation frame78 误差为左 `7.803 mm / 6.026°`、右 `4.719 mm / 1.908°`；Top-score 原 K1 右手 `33.24°` miss 被保留并在 close 前停止。最终六联图视觉 QA 通过；视频为 H.264/yuv420p、1280×796、30 FPS、21.4 秒并完整解码。
+
+## 2026-07-23（V9 四方法转换审计与 IK/TCP 语义固化）
+
+- 将单张 Orientation 六联图扩展为四张方法级审计图。Orientation、Fused、Top-score 分别读取自己的 V9 summary；OursV2 使用单独的 `oursv2_historical` 渲染路径，不伪造 AnyGrasp 换轴/camera-up/`-5 cm`。
+- Top-score 没有形成 K2 rigid target 时，第六格显示 `NOT EXECUTED`；失败注释读取最后一个非 Skipped K1 门限失败，当前为 right grasp `33.24°`。
+- 每张 PNG 新增同名 v2 JSON，记录 plan summary 与两帧 metadata 的绝对路径/SHA-256、K1/K2 左右编号、pipeline 类型、rigid action 完整性及 IK frame contract。
+- 代码审计固定结论：V9 使用 0515 Piper/OursV2 URDFIK，而非 Canonical 19 cm RTCP；`gripper_bias=0.12 m` 时 `_trans_from_gripper_to_endlink` 的位置项为 `0.12-0.12=0`。runner 的 `0.12 m` approach 仅用于 pregrasp，AnyGrasp `-0.05 m` 仅是物理 local `+X` target offset。
+
+Validation: `py_compile`、四方法 dry run、四张 1920×1404 PNG 解码、四份 JSON 解析与 PNG SHA-256 回读通过。候选编号为 Orientation/Fused K1 `L16/R5`、K2 `L14/R16`；Top-score K1 `L8/R3`、K2 参考 `L3/R2` 且 rigid action incomplete；OursV2 保存记录 K1 `0/0`、K2 `1/1`。四张原分辨率视觉 QA 通过。

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the exact selected-candidate to RoboTwin action-target transform chain."""
+"""Render method-specific candidate-to-RoboTwin transform audit sheets."""
 
 from __future__ import annotations
 
@@ -24,6 +24,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--metadata-k1", type=Path, required=True)
     parser.add_argument("--metadata-k2", type=Path, required=True)
     parser.add_argument("--method-label", required=True)
+    parser.add_argument(
+        "--pipeline-kind",
+        choices=("anygrasp_v9", "oursv2_historical"),
+        default="anygrasp_v9",
+        help="Render the AnyGrasp-to-Piper V9 chain or the historical OursV2 human-retarget chain.",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
@@ -62,7 +68,13 @@ def selected_by_arm(summary: Mapping[str, Any], frame: int) -> dict[str, dict[st
     return result
 
 
-def add_header(image: np.ndarray, title: str, subtitle: str, note: str, accent: tuple[int, int, int]) -> np.ndarray:
+def add_header(
+    image: np.ndarray,
+    title: str,
+    subtitle: str,
+    note: str,
+    accent: tuple[int, int, int],
+) -> np.ndarray:
     header_h = 102
     canvas = np.full((header_h + image.shape[0], image.shape[1], 3), 248, np.uint8)
     canvas[header_h:] = image
@@ -117,31 +129,139 @@ def draw_pair(
         )
 
 
-def main() -> int:
-    args = parse_args()
-    paths = [args.plan_summary, args.metadata_k1, args.metadata_k2]
-    missing = [str(path) for path in paths if not path.is_file()]
-    if missing:
-        raise FileNotFoundError("Missing inputs:\n" + "\n".join(missing))
-    summary = load_json(args.plan_summary)
-    if summary.get("action_target_mode") != "rigid_object_transport":
-        raise ValueError("plan summary is not a rigid_object_transport run")
-    k1_records = selected_by_arm(summary, 38)
-    k2_records = selected_by_arm(summary, 78)
-    k1_source = source_for_frame(load_json(args.metadata_k1), 38)
-    k2_source = source_for_frame(load_json(args.metadata_k2), 78)
-    action_debug = summary.get("action_target_debug_by_arm") or {}
-    if set(action_debug) != {"left", "right"}:
-        raise ValueError(f"rigid action debug is incomplete: {sorted(action_debug)}")
-    if args.dry_run:
-        print(f"Dry run: {args.method_label} -> {args.output}")
-        return 0
+def add_not_executed_panel(
+    source: Mapping[str, Any],
+    method_label: str,
+    reason: str,
+) -> np.ndarray:
+    image = background(source)
+    overlay = image.copy()
+    cv2.rectangle(overlay, (0, 0), (image.shape[1] - 1, 479), (235, 235, 235), -1)
+    image = cv2.addWeighted(overlay, 0.78, image, 0.22, 0.0)
+    cv2.putText(
+        image,
+        "NOT EXECUTED",
+        (127, 235),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.25,
+        (20, 20, 210),
+        3,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        image,
+        f"{method_label}: no K2 rigid target exists",
+        (122, 278),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.54,
+        (50, 50, 50),
+        1,
+        cv2.LINE_AA,
+    )
+    return add_header(
+        image,
+        "6 | V9 K2 RIGID OBJECT-TRANSPORT TARGET",
+        "not fabricated: execution stopped before close / attachment / action",
+        reason,
+        (0, 0, 210),
+    )
 
-    import sys
 
-    sys.path.insert(0, str(args.robotwin_root / "code_painting"))
-    from render_selection_strategy_compare_v4 import camera_to_world_pose, draw_pose
+def render_oursv2_panels(
+    draw_pose: Any,
+    k1_records: Mapping[str, Mapping[str, Any]],
+    k2_records: Mapping[str, Mapping[str, Any]],
+    k1_source: Mapping[str, Any],
+    k2_source: Mapping[str, Any],
+) -> list[np.ndarray]:
+    panels: list[np.ndarray] = []
 
+    image = background(k1_source)
+    draw_pair(draw_pose, image, k1_records, k1_source, "raw_pose_world_wxyz", "local_z", "HUMAN K1")
+    panels.append(
+        add_header(
+            image,
+            "1 | OURSV2 HUMAN-RETARGET K1 TARGET",
+            "native OursV2 convention: local +Z is the forward / approach axis",
+            "source is the saved human-replay target, not an AnyGrasp candidate",
+            (100, 100, 100),
+        )
+    )
+
+    image = background(k1_source)
+    draw_pair(draw_pose, image, k1_records, k1_source, "raw_pose_world_wxyz", "local_z", "IDENTITY")
+    panels.append(
+        add_header(
+            image,
+            "2 | NO ANYGRASP-TO-PIPER AXIS REMAP",
+            "OursV2 keeps the saved human-target orientation unchanged",
+            "the AnyGrasp +Z -> Piper +X fixed remap does not belong to this branch",
+            (90, 80, 180),
+        )
+    )
+
+    image = background(k1_source)
+    draw_pair(draw_pose, image, k1_records, k1_source, "pose_world_wxyz", "local_z", "NO UP FLIP")
+    panels.append(
+        add_header(
+            image,
+            "3 | NO CAMERA-UP CANDIDATE BRANCH",
+            "human-retarget orientation is preserved; no 180 deg candidate roll is selected",
+            "camera-up equivalence is an AnyGrasp selection rule, not an OursV2 step",
+            (0, 135, 220),
+        )
+    )
+
+    image = background(k1_source)
+    draw_pair(draw_pose, image, k1_records, k1_source, "pose_world_wxyz", "local_z", "K1 IK")
+    panels.append(
+        add_header(
+            image,
+            "4 | OURSV2 K1 TARGET SENT TO 0515 URDF IK",
+            "0515 model gripper_bias=0.12 m; adapter translation is 0.12-0.12=0",
+            "no -5 cm AnyGrasp offset and no Canonical 0.19 m RTCP transform",
+            (30, 150, 40),
+        )
+    )
+
+    image = background(k2_source)
+    draw_pair(draw_pose, image, k2_records, k2_source, "pose_world_wxyz", "local_z", "HUMAN K2")
+    panels.append(
+        add_header(
+            image,
+            "5 | OURSV2 HUMAN-RETARGET K2 TARGET",
+            "the second target comes independently from the saved human trajectory",
+            "this historical branch does not preserve a measured K1 EE-to-object transform",
+            (0, 0, 210),
+        )
+    )
+
+    image = background(k2_source)
+    draw_pair(draw_pose, image, k1_records, k2_source, "pose_world_wxyz", "local_z", "K1")
+    draw_pair(draw_pose, image, k2_records, k2_source, "pose_world_wxyz", "local_z", "K2")
+    panels.append(
+        add_header(
+            image,
+            "6 | OURSV2 K1 AND K2 TARGETS IN FRAME-78 CAMERA",
+            "both saved world targets are projected into the same D435 view",
+            "motion follows human-retarget targets; V9 rigid object transport is not applied",
+            (160, 70, 0),
+        )
+    )
+    return panels
+
+
+def render_anygrasp_panels(
+    draw_pose: Any,
+    camera_to_world_pose: Any,
+    method_label: str,
+    summary: Mapping[str, Any],
+    k1_records: Mapping[str, Mapping[str, Any]],
+    k2_records: Mapping[str, Mapping[str, Any]],
+    k1_source: Mapping[str, Any],
+    k2_source: Mapping[str, Any],
+    action_debug: Mapping[str, Any],
+) -> list[np.ndarray]:
     remap = np.array([[0.0, 0.0, -1.0], [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]])
     before_remap: dict[str, dict[str, Any]] = {}
     camera_up_pose: dict[str, dict[str, Any]] = {}
@@ -167,13 +287,17 @@ def main() -> int:
         }
 
     panels: list[np.ndarray] = []
+    candidate_ids = "/".join(
+        f"{arm[0].upper()}{int(k1_records[arm]['candidate_idx'])}" for arm in ("left", "right")
+    )
+
     image = background(k1_source)
     draw_pair(draw_pose, image, before_remap, k1_source, "pose", "local_z", "INPUT")
     panels.append(
         add_header(
             image,
             "1 | SELECTED ROBOT_REPLAY CANDIDATE",
-            "native candidate convention: local +Z is approach",
+            f"{method_label} K1 {candidate_ids} | native local +Z is approach",
             "candidate translation_cam / rotation_cam before Piper-axis remap",
             (100, 100, 100),
         )
@@ -193,7 +317,10 @@ def main() -> int:
 
     image = background(k1_source)
     draw_pair(draw_pose, image, camera_up_pose, k1_source, "pose", "local_x", "UP")
-    flips = ", ".join(f"{arm[0].upper()} flip={k1_records[arm].get('camera_up_flip_applied')}" for arm in ("left", "right"))
+    flips = ", ".join(
+        f"{arm[0].upper()} flip={k1_records[arm].get('camera_up_flip_applied')}"
+        for arm in ("left", "right")
+    )
     panels.append(
         add_header(
             image,
@@ -210,8 +337,8 @@ def main() -> int:
         add_header(
             image,
             "4 | FINAL K1 ROBOTWIN REPLAY TARGET",
-            "-5 cm along physical local +X, then sent to URDF IK",
-            "Curobo-to-SAPIEN link6 adapter is applied once at the IK boundary",
+            "-5 cm along physical local +X, then sent to 0515 URDF IK",
+            "gripper_bias=0.12 m makes adapter translation zero; Canonical 0.19 m is not used",
             (30, 150, 40),
         )
     )
@@ -222,49 +349,151 @@ def main() -> int:
         add_header(
             image,
             "5 | OLD K2: INDEPENDENT NEW GRASP CANDIDATE",
-            "this changes TCP-to-object relation after the object was attached at K1",
-            "kept only as an audit reference; no longer used by V9 action",
+            "this changes EE-to-object relation after the object was attached at K1",
+            "kept only as an audit reference; no longer used by a completed V9 action",
             (0, 0, 210),
         )
     )
 
-    corrected = {
-        arm: {
-            **k2_records[arm],
-            "pose_world_wxyz": action_debug[arm]["rigid_transport_target_pose_world_wxyz"],
+    if set(action_debug) == {"left", "right"}:
+        corrected = {
+            arm: {
+                **k2_records[arm],
+                "pose_world_wxyz": action_debug[arm]["rigid_transport_target_pose_world_wxyz"],
+            }
+            for arm in ("left", "right")
         }
-        for arm in ("left", "right")
-    }
-    image = background(k2_source)
-    draw_pair(draw_pose, image, corrected, k2_source, "pose_world_wxyz", "local_x", "V9 K2")
-    panels.append(
-        add_header(
-            image,
-            "6 | V9 K2: RIGID OBJECT-TRANSPORT TARGET",
-            "T_W_EE2 = T_W_OBJECT2 @ inverse(T_EE_OBJECT measured after K1)",
-            "same physical grasp is preserved while the object moves to FoundationPose frame 78",
-            (160, 70, 0),
+        image = background(k2_source)
+        draw_pair(draw_pose, image, corrected, k2_source, "pose_world_wxyz", "local_x", "V9 K2")
+        panels.append(
+            add_header(
+                image,
+                "6 | V9 K2: RIGID OBJECT-TRANSPORT TARGET",
+                "T_W_EE2 = T_W_OBJECT2 @ inverse(T_EE_OBJECT measured after K1)",
+                "same physical grasp is preserved while the object moves to FoundationPose frame 78",
+                (160, 70, 0),
+            )
         )
-    )
+    else:
+        failed = summary.get("failed_stage_records") or []
+        reason = "K1 did not satisfy the reach gate"
+        blocking = [
+            record
+            for record in failed
+            if str(record.get("status", "")).lower() != "skipped" and not bool(record.get("reached"))
+        ]
+        if blocking:
+            record = blocking[-1]
+            reason = (
+                f"K1 {record.get('arm', 'unknown arm')} {record.get('stage', 'unknown stage')} "
+                f"reach miss: {float(record.get('rot_err_deg', float('nan'))):.2f} deg"
+            )
+        panels.append(add_not_executed_panel(k2_source, method_label, reason))
+    return panels
+
+
+def main() -> int:
+    args = parse_args()
+    paths = [args.plan_summary, args.metadata_k1, args.metadata_k2]
+    missing = [str(path) for path in paths if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("Missing inputs:\n" + "\n".join(missing))
+
+    summary = load_json(args.plan_summary)
+    if args.pipeline_kind == "anygrasp_v9" and summary.get("action_target_mode") != "rigid_object_transport":
+        raise ValueError("plan summary is not a rigid_object_transport run")
+    k1_records = selected_by_arm(summary, 38)
+    k2_records = selected_by_arm(summary, 78)
+    k1_source = source_for_frame(load_json(args.metadata_k1), 38)
+    k2_source = source_for_frame(load_json(args.metadata_k2), 78)
+    action_debug = summary.get("action_target_debug_by_arm") or {}
+
+    if args.dry_run:
+        print(
+            f"Dry run: method={args.method_label} pipeline={args.pipeline_kind} "
+            f"rigid_action_arms={sorted(action_debug)} -> {args.output}"
+        )
+        return 0
+
+    import sys
+
+    sys.path.insert(0, str(args.robotwin_root / "code_painting"))
+    from render_selection_strategy_compare_v4 import camera_to_world_pose, draw_pose
+
+    if args.pipeline_kind == "oursv2_historical":
+        panels = render_oursv2_panels(draw_pose, k1_records, k2_records, k1_source, k2_source)
+        axis_contract = {
+            "oursv2_human_retarget": {
+                "forward": "local +Z",
+                "axis_remap": "none",
+                "camera_up_candidate_branch": "none",
+                "candidate_target_offset": "none",
+            },
+            "ik": {
+                "family": "0515 Piper/OursV2 URDFIK",
+                "gripper_bias_m": 0.12,
+                "gripper_to_endlink_translation_m": 0.0,
+                "canonical_rtcp_0p19_used": False,
+            },
+        }
+        action_target_mode = "historical_oursv2_human_retarget"
+    else:
+        panels = render_anygrasp_panels(
+            draw_pose,
+            camera_to_world_pose,
+            args.method_label,
+            summary,
+            k1_records,
+            k2_records,
+            k1_source,
+            k2_source,
+            action_debug,
+        )
+        axis_contract = {
+            "input_robot_replay": {"forward": "local +Z", "opening": "local +Y", "normal": "local -X"},
+            "piper_physical": {
+                "forward": "local +X / red",
+                "opening": "local +Y / green",
+                "camera_back": "local +Z / blue",
+            },
+            "fixed_remap": "physical +X=input +Z; physical +Y=input +Y; physical +Z=input -X",
+            "ik": {
+                "family": "0515 Piper/OursV2 URDFIK",
+                "gripper_bias_m": 0.12,
+                "gripper_to_endlink_translation_m": 0.0,
+                "canonical_rtcp_0p19_used": False,
+            },
+        }
+        action_target_mode = "rigid_object_transport"
 
     sheet = cv2.vconcat([cv2.hconcat(panels[:3]), cv2.hconcat(panels[3:])])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if not cv2.imwrite(str(args.output), sheet):
         raise RuntimeError(f"failed to write {args.output}")
     manifest = {
-        "schema": "candidate_to_robotwin_transform_audit.v1",
+        "schema": "candidate_to_robotwin_transform_audit.v2",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "method": args.method_label,
+        "pipeline_kind": args.pipeline_kind,
         "plan_summary": str(args.plan_summary.resolve()),
         "plan_summary_sha256": sha256(args.plan_summary),
+        "metadata_k1": str(args.metadata_k1.resolve()),
+        "metadata_k1_sha256": sha256(args.metadata_k1),
+        "metadata_k2": str(args.metadata_k2.resolve()),
+        "metadata_k2_sha256": sha256(args.metadata_k2),
+        "selected_record_ids": {
+            "k1_frame_38": {
+                arm: int(k1_records[arm]["candidate_idx"]) for arm in ("left", "right")
+            },
+            "k2_frame_78": {
+                arm: int(k2_records[arm]["candidate_idx"]) for arm in ("left", "right")
+            },
+        },
         "output": str(args.output.resolve()),
         "output_sha256": sha256(args.output),
-        "axis_contract": {
-            "input_robot_replay": {"forward": "local +Z", "opening": "local +Y", "normal": "local -X"},
-            "piper_physical": {"forward": "local +X / red", "opening": "local +Y / green", "camera_back": "local +Z / blue"},
-            "fixed_remap": "physical +X=input +Z; physical +Y=input +Y; physical +Z=input -X",
-        },
-        "action_target_mode": "rigid_object_transport",
+        "axis_contract": axis_contract,
+        "action_target_mode": action_target_mode,
+        "rigid_action_complete": set(action_debug) == {"left", "right"},
         "action_target_debug_by_arm": action_debug,
     }
     manifest_path = args.output.with_suffix(".json")

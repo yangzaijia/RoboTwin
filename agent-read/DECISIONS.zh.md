@@ -89,3 +89,5 @@
 - 候选换基和 K1 target 不变。K1 到位并附着物体后，必须使用当前 EE/link6 原点与当前 actor pose 建立 `T_EE_object`，再把 FoundationPose K2 object pose 转为 EE target。
 - 不能直接把期望 TCP pose 送入当前 Piper planner target；本链的 target 点是 EE/link6 原点，朝向按物理夹爪轴解释。把 target 点误当 TCP 会产生约 9–12 cm 固定偏差。
 - 刚性搬运不等同于 IK-feasible 候选筛选。Top-score K1 不可达时继续保留失败并停止，不能用 K2 修正掩盖 K1 失败。
+- V9 固定使用 0515 Piper/OursV2 URDFIK，不切换到 Canonical 19 cm RTCP。虽然配置中 `gripper_bias=0.12 m`，但 `_trans_from_gripper_to_endlink` 的位置项是 `0.12-gripper_bias=0`；12 cm model bias、12 cm pregrasp 距离和 AnyGrasp `-5 cm` target offset 必须分开命名。
+- 转换审计必须按方法分别导出。Orientation/Fused 即使选择相同也保留两张来源独立的图；Top-score 未形成 K2 rigid target 时必须显示 `NOT EXECUTED`；OursV2 不得伪装成 AnyGrasp remap 链。

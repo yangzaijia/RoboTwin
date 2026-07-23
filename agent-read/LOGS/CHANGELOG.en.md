@@ -3469,3 +3469,12 @@ Validation: `py_compile` and the formal-argument dry run pass. Both outputs are 
 - Added a six-panel transform exporter, isolated single-episode V9 runner, and 2x2 compositor. Final image/video assets are published under `matched_candidate_image_video_release_20260722/`; no V8 file is overwritten.
 
 Validation: `py_compile`, `bash -n`, three-strategy dry run, and full execution pass. V9 K1 targets have maximum absolute delta `0.0` from V8. Orientation/Fused reach action with both arms and end with object-to-Foundation-frame-78 errors of `7.803 mm / 6.026 deg` left and `4.719 mm / 1.908 deg` right. Top-score preserves the original K1-right `33.24 deg` miss and stops before close. Final six-panel visual QA passes; the video is H.264/yuv420p, 1280x796, 30 FPS, 21.4 seconds, and full-decode clean.
+
+## 2026-07-23 (V9 four-method transform audits and fixed IK/TCP semantics)
+
+- Expanded the single Orientation sheet into four method-specific audits. Orientation, Fused, and Top-score read their own V9 summaries. OursV2 uses a separate `oursv2_historical` renderer and never fabricates AnyGrasp remapping, camera-up, or `-5 cm`.
+- If Top-score never creates a rigid K2 target, panel six reads `NOT EXECUTED`. The failure note selects the last non-Skipped K1 reach failure, currently right grasp at `33.24 deg`.
+- Every PNG gains a same-stem v2 JSON with absolute paths and SHA-256 for the plan summary and both frame metadata files, K1/K2 arm IDs, pipeline kind, rigid-action completeness, and the IK frame contract.
+- Code audit fixes the interpretation: V9 uses 0515 Piper/OursV2 URDFIK, not the Canonical 19 cm RTCP. With `gripper_bias=0.12 m`, `_trans_from_gripper_to_endlink` translates by `0.12-0.12=0`. Runner `0.12 m` approach is pregrasp-only, while AnyGrasp `-0.05 m` is only a physical-local-`+X` target offset.
+
+Validation: `py_compile`, four method dry runs, decoding four 1920x1404 PNGs, parsing all four JSONs, and rereading every PNG SHA-256 pass. IDs are Orientation/Fused K1 `L16/R5`, K2 `L14/R16`; Top-score K1 `L8/R3`, reference K2 `L3/R2` with incomplete rigid action; OursV2 saved records K1 `0/0`, K2 `1/1`. All four sheets pass original-resolution visual QA.
