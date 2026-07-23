@@ -82,3 +82,10 @@
 - Withdraw the V7 claim that candidate remapping and the Curobo-to-SAPIEN link6 adapter are duplicate compensation. The former defines the physical Piper TCP axes for a task target; the latter reconciles two URDF link6 model frames.
 - The main chain is `robot_replay -> anygrasp_raw/Piper +X`, followed by the same Piper URDFIK with global/link6 adapters enabled.
 - The current comparison executes each strategy's raw top selection only. IK-feasible reranking, replacement candidates, and automatic fallback are deferred. Preserve unreachable failures and short videos; never manufacture success with a 180-degree orientation tolerance.
+
+## 2026-07-23: rigid K2 transport is an opt-in action mode
+
+- Keep `independent_keyframe_candidate` as the historical V8 default. Enable the new behavior only with `--action_target_mode rigid_object_transport`; never overwrite V8 or OursV2.
+- Candidate basis conversion and K1 targets remain unchanged. After K1 arrival and object attachment, measure `T_EE_object` from the current EE/link6 origin and current actor pose, then convert the FoundationPose K2 object pose into an EE target.
+- Do not send a desired TCP position directly as the current Piper planner target. This chain's target point is the EE/link6 origin with physical gripper-axis orientation. Treating it as TCP creates an approximately 9–12 cm fixed offset.
+- Rigid transport is not IK-feasible candidate filtering. If Top-score fails K1 reach, preserve the failure and stop; K2 correction must not hide a K1 failure.

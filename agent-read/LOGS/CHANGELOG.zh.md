@@ -3458,3 +3458,12 @@ Validation: Python `py_compile`、正式参数 dry-run、三路 640×480/10 FPS 
 - 两张 1920×1152 六格图发布到 `matched_candidate_image_video_release_20260722/`，并与到位图分开命名；前者表示规划前的 V8 candidate target，后者表示目标/实测 EE 到位对照。
 
 Validation: `py_compile` 与正式参数 dry run 通过；两张图均为 1920×1152 RGB PNG；manifest JSON 通过解析；候选编号与三份 plan summary 逐项一致；frame38/frame78 原分辨率视觉 QA 通过，物理轴为红 `+X` forward、绿 `+Y` opening、蓝 `+Z` normal。
+
+## 2026-07-23（V9 K2 刚性物体搬运）
+
+- 审计确认 V8 action 的 K2 是独立新抓取候选，但物体已按 K1 `T_TCP_object` 附着，因此 K2 会破坏夹爪—物体相对关系。
+- planner 新增默认关闭的 `--action_target_mode rigid_object_transport`，双臂/单臂均在 K1 实际到位后使用当前 EE 与 actor 建立 `T_EE_object`，再从 FoundationPose K2 object pose 计算 action EE target。默认 V8/OursV2 行为不变。
+- 第一版实验把 target 点误当 TCP；action EE 到位但物体仍有 9–12 cm 固定误差。该实验保留在 `paper_v9_rigid_object_transport_20260723_*` 作失败审计，不发布。正式版写入 `paper_v9_ee_rigid_object_transport_20260723_*`。
+- 新增六联转换图导出器、单 episode V9 runner 与 2×2 合成器；最终图片/视频发布到 `matched_candidate_image_video_release_20260722/`，V8 文件未覆盖。
+
+Validation: `py_compile`、`bash -n`、三策略 dry run 与实跑通过；V9 K1 target 相对 V8 最大绝对差为 `0.0`。Orientation/Fused action 双臂到位，最终 object 对 Foundation frame78 误差为左 `7.803 mm / 6.026°`、右 `4.719 mm / 1.908°`；Top-score 原 K1 右手 `33.24°` miss 被保留并在 close 前停止。最终六联图视觉 QA 通过；视频为 H.264/yuv420p、1280×796、30 FPS、21.4 秒并完整解码。

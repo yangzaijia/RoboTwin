@@ -309,6 +309,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pause_after_keyframe1_seconds", type=float, default=0.0, help="After reaching keyframe-1 and closing the gripper, hold the robot at that pose for N seconds before planning/executing the next target.")
     parser.add_argument("--replay_objects_during_action", type=int, default=0, help="If 1, replay object tracks from keyframe-1 to keyframe-2 during the action stage instead of attaching selected objects to the TCP.")
     parser.add_argument("--replay_objects_ignore_collision", type=int, default=1, help="If 1, replayed objects are created as visual-only kinematic actors without collision.")
+    parser.add_argument(
+        "--action_target_mode",
+        choices=["independent_keyframe_candidate", "rigid_object_transport"],
+        default="independent_keyframe_candidate",
+        help=(
+            "How to construct the keyframe-2 action target. The default executes the independently selected "
+            "keyframe-2 grasp candidate. rigid_object_transport preserves the actual TCP-to-object transform "
+            "established after keyframe-1 and moves the attached object to its FoundationPose keyframe-2 pose."
+        ),
+    )
     parser.add_argument("--enable_grasp_action_object_collision", type=int, default=0, help="If 1, keep selected execution objects collision-capable but disable their collision before grasp. Collision is enabled only for the selected grasped objects during close_gripper/action, while the original no-collision mode remains available when this flag is 0.")
     parser.add_argument("--grasp_action_object_collision_start_stage", choices=["close_gripper", "grasp", "pregrasp"], default="close_gripper", help="When enable_grasp_action_object_collision=1, decide from which stage the selected execution objects should participate in collision. 'close_gripper' keeps the old behavior. 'grasp' enables collision before the grasp stage. 'pregrasp' keeps collision enabled from the beginning of execution.")
     parser.add_argument("--execution_object_collision_mode", choices=["convex", "solid_bbox"], default="convex", help="Collision shape used for execution objects when collision is enabled. 'convex' keeps the current convex mesh collision. 'solid_bbox' replaces collision with one solid axis-aligned box derived from the mesh bounds.")
@@ -1050,6 +1060,52 @@ def load_object_tracks(replay_dir: Path, mesh_overrides: Optional[Dict[str, Path
             visible=np.asarray(data[f"{key}__visible"], dtype=bool),
         )
     return frame_indices, tracks
+
+
+def pose_matrix_to_wxyz(pose_world_matrix: np.ndarray) -> np.ndarray:
+    matrix = np.asarray(pose_world_matrix, dtype=np.float64).reshape(4, 4)
+    rotation = base.orthonormalize_rotation(matrix[:3, :3])
+    quat_wxyz = base.quat_xyzw_to_wxyz(R.from_matrix(rotation).as_quat())
+    return np.concatenate([matrix[:3, 3], quat_wxyz]).astype(np.float64)
+
+
+def object_track_pose_matrix_at_frame(track: ObjectTrack, source_frame: int) -> np.ndarray:
+    matches = np.flatnonzero(np.asarray(track.frame_indices, dtype=np.int64) == int(source_frame))
+    if len(matches) != 1:
+        raise KeyError(
+            f"Object track {track.name!r} has {len(matches)} entries for source_frame={int(source_frame)}"
+        )
+    index = int(matches[0])
+    if not bool(np.asarray(track.visible, dtype=bool)[index]):
+        raise ValueError(f"Object track {track.name!r} is not visible at source_frame={int(source_frame)}")
+    pose = np.asarray(track.pose_world_matrix[index], dtype=np.float64).reshape(4, 4)
+    if not np.isfinite(pose).all():
+        raise ValueError(f"Object track {track.name!r} has a non-finite pose at source_frame={int(source_frame)}")
+    return pose
+
+
+def rigid_object_transport_target(
+    *,
+    track: ObjectTrack,
+    action_frame: int,
+    target_frame_to_object: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    desired_object_world = object_track_pose_matrix_at_frame(track, action_frame)
+    target_frame_world = desired_object_world @ np.linalg.inv(
+        np.asarray(target_frame_to_object, dtype=np.float64).reshape(4, 4)
+    )
+    return pose_matrix_to_wxyz(target_frame_world), desired_object_world
+
+
+def actor_pose_world_matrix(actor: sapien.Entity) -> np.ndarray:
+    pose = actor.get_pose()
+    pose_wxyz = np.concatenate(
+        [
+            np.asarray(pose.p, dtype=np.float64).reshape(3),
+            base.normalize_quat_wxyz(np.asarray(pose.q, dtype=np.float64).reshape(4)),
+        ]
+    ).astype(np.float64)
+    return pose_wxyz_to_matrix(pose_wxyz)
 
 
 def load_replay_head_camera_poses(replay_dir: Path) -> Dict[int, np.ndarray]:
@@ -5873,6 +5929,7 @@ def main() -> None:
     selected_objects_by_executed_arm: Dict[str, str] = {}
     init_pose_info_by_executed_arm: Dict[str, Dict[str, object]] = {}
     init_prefix_frames_written_by_executed_arm: Dict[str, int] = {}
+    action_target_debug_by_arm: Dict[str, Dict[str, object]] = {}
 
     try:
         if _summary_handover and len(execution_sequences) >= 2:
@@ -6403,6 +6460,52 @@ def main() -> None:
                         attached_actor_by_arm[arm_name] = object_states[obj_name].actor
                         tcp_pose = renderer.get_current_tcp_pose(arm_name)
                         tcp_to_object_by_arm[arm_name] = np.linalg.inv(pose_wxyz_to_matrix(tcp_pose)) @ object_states[obj_name].pose_world_matrix
+                if str(args.action_target_mode) == "rigid_object_transport":
+                    if bool(args.replay_objects_during_action):
+                        raise ValueError(
+                            "--action_target_mode rigid_object_transport is incompatible with "
+                            "--replay_objects_during_action 1"
+                        )
+                    for arm_name in dual_arms:
+                        obj_name = selected_objects_by_executed_arm[arm_name]
+                        action_frame = int(exec_selected_by_arm[arm_name][1].source_frame)
+                        independent_target = np.asarray(action_targets[arm_name], dtype=np.float64).reshape(7).copy()
+                        tcp_to_object = tcp_to_object_by_arm.get(arm_name)
+                        if tcp_to_object is None:
+                            raise RuntimeError(f"Missing TCP-to-object attachment transform for arm={arm_name}")
+                        actor = attached_actor_by_arm.get(arm_name)
+                        if actor is None:
+                            raise RuntimeError(f"Missing attached object actor for arm={arm_name}")
+                        current_ee_pose = get_current_pose_for_error(renderer, arm_name, "ee")
+                        current_object_world = actor_pose_world_matrix(actor)
+                        ee_to_object = (
+                            np.linalg.inv(pose_wxyz_to_matrix(current_ee_pose)) @ current_object_world
+                        )
+                        corrected_target, desired_object_world = rigid_object_transport_target(
+                            track=object_tracks[obj_name],
+                            action_frame=action_frame,
+                            target_frame_to_object=ee_to_object,
+                        )
+                        action_targets[arm_name] = corrected_target
+                        action_target_debug_by_arm[arm_name] = {
+                            "mode": "rigid_object_transport",
+                            "object_name": obj_name,
+                            "action_frame": action_frame,
+                            "independent_keyframe_candidate_pose_world_wxyz": independent_target.tolist(),
+                            "actual_tcp_to_object_matrix_at_attachment": np.asarray(
+                                tcp_to_object, dtype=np.float64
+                            ).reshape(4, 4).tolist(),
+                            "actual_ee_to_object_matrix_at_attachment": ee_to_object.tolist(),
+                            "target_pose_semantics": "Piper EE/link6 origin with physical gripper-axis orientation",
+                            "desired_object_pose_world_matrix": desired_object_world.tolist(),
+                            "rigid_transport_target_pose_world_wxyz": corrected_target.tolist(),
+                        }
+                        print(
+                            "[action-target] mode=rigid_object_transport "
+                            f"arm={arm_name} object={obj_name} frame={action_frame} "
+                            f"old_xyz={np.round(independent_target[:3], 4).tolist()} "
+                            f"new_xyz={np.round(corrected_target[:3], 4).tolist()}"
+                        )
 
                 # ── pnp_tray place strategy: approach from above ──
                 # When place_strategy == "raise_above_then_lower", first move to a
@@ -6894,6 +6997,49 @@ def main() -> None:
                     attached_actor = object_states[exec_object_name].actor
                     tcp_pose = renderer.get_current_tcp_pose(exec_arm)
                     tcp_to_object = np.linalg.inv(pose_wxyz_to_matrix(tcp_pose)) @ object_states[exec_object_name].pose_world_matrix
+                if str(args.action_target_mode) == "rigid_object_transport":
+                    if bool(args.replay_objects_during_action):
+                        raise ValueError(
+                            "--action_target_mode rigid_object_transport is incompatible with "
+                            "--replay_objects_during_action 1"
+                        )
+                    if tcp_to_object is None:
+                        raise RuntimeError(f"Missing TCP-to-object attachment transform for arm={exec_arm}")
+                    if attached_actor is None:
+                        raise RuntimeError(f"Missing attached object actor for arm={exec_arm}")
+                    independent_target = np.asarray(action_pose, dtype=np.float64).reshape(7).copy()
+                    action_frame = int(exec_selected_keyframes[1].source_frame)
+                    current_ee_pose = get_current_pose_for_error(renderer, exec_arm, "ee")
+                    current_object_world = actor_pose_world_matrix(attached_actor)
+                    ee_to_object = (
+                        np.linalg.inv(pose_wxyz_to_matrix(current_ee_pose)) @ current_object_world
+                    )
+                    action_pose, desired_object_world = rigid_object_transport_target(
+                        track=object_tracks[exec_object_name],
+                        action_frame=action_frame,
+                        target_frame_to_object=ee_to_object,
+                    )
+                    action_target_debug_by_arm[exec_arm] = {
+                        "mode": "rigid_object_transport",
+                        "object_name": exec_object_name,
+                        "action_frame": action_frame,
+                        "independent_keyframe_candidate_pose_world_wxyz": independent_target.tolist(),
+                        "actual_tcp_to_object_matrix_at_attachment": np.asarray(
+                            tcp_to_object, dtype=np.float64
+                        ).reshape(4, 4).tolist(),
+                        "actual_ee_to_object_matrix_at_attachment": ee_to_object.tolist(),
+                        "target_pose_semantics": "Piper EE/link6 origin with physical gripper-axis orientation",
+                        "desired_object_pose_world_matrix": desired_object_world.tolist(),
+                        "rigid_transport_target_pose_world_wxyz": np.asarray(
+                            action_pose, dtype=np.float64
+                        ).reshape(7).tolist(),
+                    }
+                    print(
+                        "[action-target] mode=rigid_object_transport "
+                        f"arm={exec_arm} object={exec_object_name} frame={action_frame} "
+                        f"old_xyz={np.round(independent_target[:3], 4).tolist()} "
+                        f"new_xyz={np.round(np.asarray(action_pose)[:3], 4).tolist()}"
+                    )
 
                 # ── place strategy for single-arm path (stack_cups etc.) ──
                 _sp_place_strategy = str((reused_plan_summary or {}).get("place_strategy", "none"))
@@ -7219,6 +7365,8 @@ def main() -> None:
         "dual_stage_freeze_reached_arms_on_replan": int(args.dual_stage_freeze_reached_arms_on_replan),
         "require_keyframe1_reached_before_close": int(args.require_keyframe1_reached_before_close),
         "require_keyframe1_reached_before_action": int(args.require_keyframe1_reached_before_action),
+        "action_target_mode": str(args.action_target_mode),
+        "action_target_debug_by_arm": action_target_debug_by_arm,
         "fail_on_execution_failure": int(args.fail_on_execution_failure),
         "debug_stop_after_keyframe1": int(args.debug_stop_after_keyframe1),
         "execution_mode": "dual_sync" if dual_sync_mode else "single_or_sequential",

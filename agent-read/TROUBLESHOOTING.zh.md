@@ -160,3 +160,11 @@
 - 原因：metrics 保存的是 SAPIEN camera entity pose；本项目该 pose 使用 local `+X` forward、`+Y` left、`+Z` up。它不是 `camera.get_model_matrix()` 的 OpenGL `-Z` forward 矩阵。
 - 修复：先把 world point 变换到 entity local，再按 `OpenCV right=-local Y, down=-local Z, forward=local X` 投影。不得直接复用对 `get_model_matrix()` 使用的 `[x,-y,-z]` 转换。
 - 验证：目标 C-gripper 应与原视频的 SAPIEN target-axis actor 同中心；`pick_diverse_bottles/id0` KF38/KF78 到位图已完成原分辨率视觉核对。
+
+## K2/action 中夹爪朝向正确，但与瓶子的 retreat/相对位置不一致
+
+- 症状：K1 抓取姿态正确；action 时机器人到达 K2 candidate，但瓶子相对夹爪发生固定变化，或瓶子与 FoundationPose K2 相差约 9–12 cm。
+- 第一原因：旧链路把 K2 当作新的独立抓取候选，但瓶子仍使用 K1 的刚性附着关系。应在 K1 到位后保持 `T_EE_object`，而不是执行新的 K2 candidate-relative grasp。
+- 第二原因：Piper 当前 planner target 点是 EE/link6 原点；物体附着跟随 TCP。若把由 `T_TCP_object` 推出的期望 TCP pose 直接作为 planner target，会留下 EE↔TCP 固定平移。
+- 修复：使用 `--action_target_mode rigid_object_transport`。实现从当前 EE 与当前 actor 建立 `T_EE_object`，再令 `T_W_EE2 = T_W_object2 @ inverse(T_EE_object)`。
+- 检查 `plan_summary.json` 的 `action_target_debug_by_arm`：必须同时包含 `actual_tcp_to_object_matrix_at_attachment`、`actual_ee_to_object_matrix_at_attachment`、`desired_object_pose_world_matrix` 和 `rigid_transport_target_pose_world_wxyz`。

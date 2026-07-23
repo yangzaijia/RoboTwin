@@ -82,3 +82,10 @@
 - 撤销“candidate remap 与 Curobo→SAPIEN link6 adapter 是重复补偿”的 V7 结论；前者定义任务目标的 Piper 物理 TCP 轴，后者协调两套 URDF link6 模型帧。
 - 主链路固定为 `robot_replay → anygrasp_raw/Piper +X` 后进入同一 Piper URDFIK，并保留 global/link6 adapters。
 - 当前比较只执行各策略原始 top 选择；IK-feasible 重排、替代候选和自动 fallback 延后。不可达候选应保留失败和短视频，不能通过放宽 180° 姿态容差伪装成功。
+
+## 2026-07-23：K2 刚性搬运作为 opt-in action 模式
+
+- 默认 `independent_keyframe_candidate` 保留历史 V8 行为；新逻辑只通过 `--action_target_mode rigid_object_transport` 启用，不覆盖 V8 或 OursV2。
+- 候选换基和 K1 target 不变。K1 到位并附着物体后，必须使用当前 EE/link6 原点与当前 actor pose 建立 `T_EE_object`，再把 FoundationPose K2 object pose 转为 EE target。
+- 不能直接把期望 TCP pose 送入当前 Piper planner target；本链的 target 点是 EE/link6 原点，朝向按物理夹爪轴解释。把 target 点误当 TCP 会产生约 9–12 cm 固定偏差。
+- 刚性搬运不等同于 IK-feasible 候选筛选。Top-score K1 不可达时继续保留失败并停止，不能用 K2 修正掩盖 K1 失败。

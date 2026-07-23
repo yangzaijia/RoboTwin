@@ -3460,3 +3460,12 @@ Validation: Python `py_compile`, a formal-argument dry run, complete decode of a
 - Two 1920x1152 sheets are published under `matched_candidate_image_video_release_20260722/` with names distinct from the arrival sheet. The candidate sheets show planned V8 targets; the arrival sheet compares target and measured EE.
 
 Validation: `py_compile` and the formal-argument dry run pass. Both outputs are 1920x1152 RGB PNGs; the manifest parses as JSON; candidate IDs match all three plan summaries exactly; original-resolution frame-38/frame-78 visual QA passes with physical red `+X` forward, green `+Y` opening, and blue `+Z` normal axes.
+
+## 2026-07-23 (V9 rigid K2 object transport)
+
+- The audit confirms that V8 action uses an independent new K2 grasp candidate after the object is already attached with the K1 `T_TCP_object`, so K2 breaks the gripper-to-object relation.
+- Added opt-in `--action_target_mode rigid_object_transport`. Both dual- and single-arm execution measure `T_EE_object` from the current EE and actor after actual K1 arrival, then derive the action EE target from the FoundationPose K2 object pose. Default V8/OursV2 behavior is unchanged.
+- The first experiment incorrectly treated the planner target point as TCP. Action EE reached its target, but the object retained a 9–12 cm fixed error. That failed audit remains under `paper_v9_rigid_object_transport_20260723_*` and is not published. Formal output uses `paper_v9_ee_rigid_object_transport_20260723_*`.
+- Added a six-panel transform exporter, isolated single-episode V9 runner, and 2x2 compositor. Final image/video assets are published under `matched_candidate_image_video_release_20260722/`; no V8 file is overwritten.
+
+Validation: `py_compile`, `bash -n`, three-strategy dry run, and full execution pass. V9 K1 targets have maximum absolute delta `0.0` from V8. Orientation/Fused reach action with both arms and end with object-to-Foundation-frame-78 errors of `7.803 mm / 6.026 deg` left and `4.719 mm / 1.908 deg` right. Top-score preserves the original K1-right `33.24 deg` miss and stops before close. Final six-panel visual QA passes; the video is H.264/yuv420p, 1280x796, 30 FPS, 21.4 seconds, and full-decode clean.

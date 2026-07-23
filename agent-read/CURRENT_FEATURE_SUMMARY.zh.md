@@ -7,6 +7,9 @@
 
 ## 本轮新增
 
+- 新增默认关闭的 `--action_target_mode rigid_object_transport`。V8 的 K1 候选、`robot_replay → Piper physical` 换基、camera-up、`-5 cm @ local +X` 与 IK 参数保持不变；K1 到位后以当前 EE 和当前 object actor 建立 `T_EE_object`，再用 `T_W_EE2 = T_W_object2 @ inverse(T_EE_object)` 构造 K2。
+- 审计确认旧 V8 K2 是新的独立抓取候选，但物体已按 K1 关系刚性附着，因此会改变夹爪—物体关系。第一版 V9 错把 planner target 点当 TCP，留下约 9–12 cm 固定误差；正式 `v9_ee_rigid_object_transport_20260723` 使用 EE/link6 目标点，Orientation/Fused 的最终物体误差为左 `7.8 mm / 6.0°`、右 `4.7 mm / 1.9°`。
+- 六联转换图和新 2×2 视频发布在 `paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/`。Top-score 仍保留 K1 右手 `33.24°` miss 并在 close/action 前停止；没有加入 IK-feasible fallback。复现见 `COMMANDS/rigid_object_transport_v9.zh.md`。
 - V8 修正 V7 对两个独立变换的误判：候选侧 `robot_replay → anygrasp_raw/Piper physical TCP` 是任务目标换基；IK 侧 Curobo-link6 → SAPIEN-link6 adapter 是求解 URDF 与渲染 URDF 的模型帧换基。正确链路必须同时执行两者，各执行一次。
 - `robot_replay` 输入以 canonical `+Z` 为 approach，经 `swap_red_blue_keep_green` 转为 Piper 物理 `+X` approach 后再进入原有 Piper URDFIK；IK 侧继续保留 global adapter 与 Curobo→SAPIEN link6 adapter。这里不存在独立的“canonical IK”求解器。
 - 正确物理轴对应为 `raw +X = canonical +Z`、`raw +Y = canonical +Y`、`raw +Z = -canonical +X`。`pick_diverse_bottles/id0` 的三组映射误差均为 `0°`；camera-back-up 使用 `-canonical X = raw +Z` 朝 world up。

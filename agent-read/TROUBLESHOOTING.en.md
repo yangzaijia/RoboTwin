@@ -160,3 +160,11 @@
 - Cause: the metrics store the SAPIEN camera entity pose. In this project that pose uses local `+X` forward, `+Y` left, and `+Z` up; it is not the OpenGL `-Z`-forward matrix returned by `camera.get_model_matrix()`.
 - Fix: transform the world point into entity-local coordinates, then project with `OpenCV right=-local Y, down=-local Z, forward=local X`. Do not reuse the `[x,-y,-z]` conversion intended for `get_model_matrix()`.
 - Validation: the target C-gripper must share its center with the source video's SAPIEN target-axis actor. Original-resolution KF38/KF78 arrival images for `pick_diverse_bottles/id0` pass this check.
+
+## K2/action orientation is correct, but retreat or gripper-to-bottle position is inconsistent
+
+- Symptom: K1 grasp orientation is correct. During action the robot reaches the K2 candidate, but the bottle changes its relation to the gripper or remains about 9–12 cm from the FoundationPose K2 target.
+- First cause: the legacy chain treats K2 as a new independent grasp candidate while the bottle still uses the rigid K1 attachment relation. Preserve `T_EE_object` measured after K1 rather than executing a new K2 candidate-relative grasp.
+- Second cause: the current Piper planner target point is the EE/link6 origin, while object attachment follows TCP. Sending a desired TCP pose derived from `T_TCP_object` directly as the planner target leaves the fixed EE-to-TCP translation.
+- Fix: use `--action_target_mode rigid_object_transport`. The implementation measures `T_EE_object` from the current EE and actor, then applies `T_W_EE2 = T_W_object2 @ inverse(T_EE_object)`.
+- Inspect `action_target_debug_by_arm` in `plan_summary.json`. It must contain `actual_tcp_to_object_matrix_at_attachment`, `actual_ee_to_object_matrix_at_attachment`, `desired_object_pose_world_matrix`, and `rigid_transport_target_pose_world_wxyz`.
