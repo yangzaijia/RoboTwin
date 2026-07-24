@@ -67,5 +67,5 @@
 ## Isolated V9.1 RTCP / OursV2+5 cm comparison
 
 - `rigid_object_transport` can preserve either `EE→object` or `RTCP→object` according to target semantics. Legacy V9 remains EE by default; the new four-strategy Canonical comparison uses RTCP.
-- The comparison fixes `pregrasp=0.12 m` and normalized gripper commands `open=1.0 / close=0.4`, preserving unreachable candidates without fallback.
+- The comparison fixes `pregrasp=0.12 m` and normalized gripper commands `open=1.0 / close=0.3`, preserving unreachable candidates without fallback.
 - See `COMMANDS/planning_compare_v9_1.en.md` for generation, composition, and validation commands.

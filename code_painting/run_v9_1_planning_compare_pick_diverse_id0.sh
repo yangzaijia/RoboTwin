@@ -4,7 +4,7 @@ set -u -o pipefail
 ROOT=/home/zaijia001/ssd/RoboTwin
 ASSET_ROOT=/home/zaijia001/ssd/data/piper/paper_qualitative_assets
 RELEASE_ROOT="$ASSET_ROOT/outputs/matched_candidate_image_video_release_20260722"
-RUN_ROOT="$RELEASE_ROOT/v9_1_planning_runs"
+RUN_ROOT="$RELEASE_ROOT/v9_1_planning_runs_close03"
 DATA_ROOT=/home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles
 V8_ROOT="$ROOT/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes"
 MODE=""
@@ -137,7 +137,7 @@ run_one() {
     --action_target_mode rigid_object_transport
     --reach_error_pose_source "$reach_source"
     --open_gripper 1.0
-    --close_gripper 0.4
+    --close_gripper 0.3
     --replan_until_reached 1
     --replan_until_reached_max_attempts 1
     --fail_on_execution_failure 0

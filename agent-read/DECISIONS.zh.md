@@ -97,4 +97,4 @@
 - `rigid_object_transport` 的刚性参考帧必须与 planner target 一致：旧 Piper EE/link6 链使用 `ee`，Canonical Real-TCP 链使用 `tcp`。
 - 默认仍为 `ee`，因此历史 V9 数值与输出不改变；Canonical 只能显式选择 `tcp`，不能把 EE 目标二次解释为 RTCP。
 - `0.12 m pregrasp`、`0.14 m OursV2 历史目标退让`、`0.05 m 候选偏移` 和 `0.19 m Canonical tool transform` 必须在配置、manifest 和说明中分开记录。
-- 仿真夹爪控制接口使用归一化 `[0,1]`；论文对比的 `close=0.4` 表示保持 40% 全开宽度，不是以米为单位的 0.4。
+- 仿真夹爪控制接口使用归一化 `[0,1]`；当前论文对比的 `close=0.3` 表示保持 30% 全开宽度，不是以米为单位的 0.3。

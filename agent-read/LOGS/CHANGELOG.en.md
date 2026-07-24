@@ -3493,3 +3493,11 @@ Validation: local and pine2 Python `py_compile`, runner `bash -n`, and four-comm
 - Initial composition failed because `selected_episode.display_name` was missing. Only composition was affected; all eight planning runs remained valid. The compositor now writes the field and was rerun.
 
 Final validation: all eight commands use `open=1.0`, `close=0.4`, and close gate=`0`. All four Canonical summaries record rigid source `tcp`; all four OursV2+5 cm summaries record `ee`. Both final MP4s are H.264/yuv420p, 1280x796 at 30 FPS, 912 frames, and 30.4 seconds; both pass `ffprobe` and full `ffmpeg -nostdin` decode. Original-resolution visual QA at 18 seconds confirms separate headers, all four panes, and grippers displayed at 40% of fully open width.
+
+## 2026-07-24 (V9.1 gripper close changed from 0.4 to 0.3)
+
+- Changed only the normalized `close_gripper` command from `0.4` to `0.3` in all eight runs. Candidates, the Canonical 19 cm tool transform, the OursV2 14+5 cm target retreat, 12 cm pregrasp, IK parameters, and rigid-transport reference frames remain unchanged.
+- New per-pane outputs are isolated under `v9_1_planning_runs_close03/`; prior `close=0.4` per-pane outputs remain under `v9_1_planning_runs/`.
+- The final `v9-1_canonical.mp4` and `v9-1_oursv2-5.mp4` are overwritten in place as requested.
+
+Validation: both batches return zero; all eight command files and prepared summaries record `close=0.3`. Elementwise comparison against the previous `close=0.4` selected target poses gives maximum absolute delta `0.0`, proving that no retreat, candidate, or orientation changed. All four inputs in both configs come from `v9_1_planning_runs_close03/`, with `CLOSE=0.3` headers. Both final MP4s are H.264/yuv420p, 1280x796 at 30 FPS, 912 frames, and 30.4 seconds; both pass full decode and original-resolution visual QA at 18 seconds.

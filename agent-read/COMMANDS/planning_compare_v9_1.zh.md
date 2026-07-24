@@ -10,7 +10,7 @@
 - Canonical tool：`Ry(-1.57) @ Tx(0.19)`；
 - 历史 OursV2 人手目标退让：`0.14 m`；
 - OursV2+5 cm 的人手格总退让：`0.19 m`；
-- 夹爪归一化命令：全开 `1.0`，关闭目标 `0.4`；
+- 夹爪归一化命令：全开 `1.0`，关闭目标 `0.3`；
 - 不进行 IK-feasible 候选替换。
 - 为保证每格都展示闭合与后续规划，可视化运行不让 K1 miss 阻断 close/action；miss 仍写入 summary，不标为成功。
 
@@ -69,4 +69,5 @@ ffmpeg -v error -i /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outpu
 
 - 最终视频：`.../matched_candidate_image_video_release_20260722/v9-1_canonical.mp4`
 - 最终视频：`.../matched_candidate_image_video_release_20260722/v9-1_oursv2-5.mp4`
-- 单路结果、准备后的 summary、完整命令和日志：`.../matched_candidate_image_video_release_20260722/v9_1_planning_runs/`
+- 当前 `close=0.3` 的单路结果、准备后的 summary、完整命令和日志：`.../matched_candidate_image_video_release_20260722/v9_1_planning_runs_close03/`
+- 旧 `close=0.4` 单路结果保留在：`.../matched_candidate_image_video_release_20260722/v9_1_planning_runs/`

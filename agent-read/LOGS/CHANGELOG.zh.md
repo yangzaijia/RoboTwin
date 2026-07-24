@@ -3491,3 +3491,11 @@ Validation: 本地与 pine2 的 Python `py_compile`、runner `bash -n`、两逻�
 - 首次合成在 `selected_episode.display_name` 缺失处报错；仅影响拼接，八路规划未受影响。合成器补齐字段后重跑。
 
 Final validation: 八路 command 均为 `open=1.0`、`close=0.4`、close gate=`0`。四路 Canonical summary 的 rigid source 均为 `tcp`；四路 OursV2+5 cm 均为 `ee`。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，并通过 `ffprobe` 与 `ffmpeg -nostdin` 完整解码。18 秒原分辨率抽帧视觉 QA 确认 2×2 标题栏与视频分离、四格均存在且夹爪按 40% 全开宽度显示。
+
+## 2026-07-24（V9.1 夹爪闭合由 0.4 调整为 0.3）
+
+- 仅将八路执行的归一化 `close_gripper` 从 `0.4` 改为 `0.3`；候选、Canonical 19 cm 工具变换、OursV2 14+5 cm 目标退让、12 cm pregrasp、IK 参数与 rigid transport 参考帧全部保持不变。
+- 新单路结果隔离写入 `v9_1_planning_runs_close03/`；旧 `close=0.4` 单路结果保留在 `v9_1_planning_runs/`。
+- 最终 `v9-1_canonical.mp4` 与 `v9-1_oursv2-5.mp4` 按用户要求原地覆盖。
+
+Validation: 两组 batch 均返回 0；八路 command 与 prepared summary 均为 `close=0.3`。和旧 `close=0.4` 版逐项比较全部 selected target pose，最大绝对差为 `0.0`，证明本轮未改变 retreat、候选或朝向。两份 config 的四路输入均来自 `v9_1_planning_runs_close03/`，标题为 `CLOSE=0.3`。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，并通过完整解码；18 秒原分辨率抽帧视觉 QA 通过。

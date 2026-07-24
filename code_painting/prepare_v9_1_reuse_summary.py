@@ -129,7 +129,7 @@ def main() -> int:
         "final_target_retreat_or_offset_m": final_retreat_m,
         "pregrasp_retreat_m": 0.12,
         "open_gripper_normalized": 1.0,
-        "close_gripper_normalized": 0.4,
+        "close_gripper_normalized": 0.3,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

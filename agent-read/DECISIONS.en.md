@@ -97,4 +97,4 @@
 - The rigid reference frame must match the planner target: use `ee` for the legacy Piper EE/link6 chain and `tcp` for the Canonical Real-TCP chain.
 - The default remains `ee`, so historical V9 numbers and outputs do not change. Canonical runs must explicitly select `tcp`; an EE target must never be reinterpreted as RTCP.
 - Record `0.12 m pregrasp`, the historical `0.14 m OursV2 target retreat`, the `0.05 m candidate offset`, and the `0.19 m Canonical tool transform` as separate quantities in configs, manifests, and documentation.
-- The simulated gripper command is normalized to `[0,1]`. Paper comparison `close=0.4` means retain 40% of fully open width, not 0.4 meters.
+- The simulated gripper command is normalized to `[0,1]`. The current paper comparison uses `close=0.3`, meaning 30% of fully open width, not 0.3 meters.

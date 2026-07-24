@@ -45,7 +45,7 @@ def main() -> int:
         args.asset_root
         / "outputs/matched_candidate_image_video_release_20260722"
     )
-    run_root = release / "v9_1_planning_runs" / args.logic
+    run_root = release / "v9_1_planning_runs_close03" / args.logic
     strategies = ("orientation", "fused", "topscore", "oursv2")
     videos = {
         strategy: run_root / strategy / "planner_output/head_cam_plan.mp4"
@@ -61,7 +61,7 @@ def main() -> int:
     duration = max(probe_duration(path) for path in videos.values())
     if args.logic == "canonical":
         method = "CANONICAL RTCP"
-        group = "RTCP TARGET | 19CM TOOL | CLOSE=0.4"
+        group = "RTCP TARGET | 19CM TOOL | CLOSE=0.3"
         note = (
             "Candidate/human-center origin is the RTCP target. "
             "IK applies T_L6URDF_RTCP=Ry(-1.57)@Tx(0.19); "
@@ -69,7 +69,7 @@ def main() -> int:
         )
     else:
         method = "OURS V2 + 5CM"
-        group = "LEGACY TARGET | EXTRA 5CM | CLOSE=0.4"
+        group = "LEGACY TARGET | EXTRA 5CM | CLOSE=0.3"
         note = (
             "AnyGrasp panes preserve the V8 5cm local-forward candidate offset. "
             "The OursV2 pane adds 5cm to its historical 14cm local +Z retreat "
@@ -94,7 +94,7 @@ def main() -> int:
         "evidence_notes": [
             note,
             "Pregrasp retreat is 0.12m and does not change the final grasp target.",
-            "Gripper commands are normalized: open=1.0, close=0.4.",
+            "Gripper commands are normalized: open=1.0, close=0.3.",
             "No IK-feasible fallback candidate is introduced.",
             "IK misses remain recorded, but do not gate close/action in this visualization-only comparison.",
         ],

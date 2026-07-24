@@ -10,7 +10,7 @@ Fixed parameters:
 - Canonical tool: `Ry(-1.57) @ Tx(0.19)`;
 - historical OursV2 human-target retreat: `0.14 m`;
 - total human-pane retreat in OursV2+5 cm: `0.19 m`;
-- normalized gripper commands: fully open `1.0`, close target `0.4`;
+- normalized gripper commands: fully open `1.0`, close target `0.3`;
 - no IK-feasible candidate replacement.
 - To show close and downstream planning in every pane, a K1 miss does not gate close/action in this visualization run. The miss remains in the summary and is not relabeled as success.
 
@@ -69,4 +69,5 @@ ffmpeg -v error -i /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outpu
 
 - Final video: `.../matched_candidate_image_video_release_20260722/v9-1_canonical.mp4`
 - Final video: `.../matched_candidate_image_video_release_20260722/v9-1_oursv2-5.mp4`
-- Per-pane outputs, prepared summaries, complete commands, and logs: `.../matched_candidate_image_video_release_20260722/v9_1_planning_runs/`
+- Current `close=0.3` per-pane outputs, prepared summaries, complete commands, and logs: `.../matched_candidate_image_video_release_20260722/v9_1_planning_runs_close03/`
+- Previous `close=0.4` per-pane outputs remain under: `.../matched_candidate_image_video_release_20260722/v9_1_planning_runs/`

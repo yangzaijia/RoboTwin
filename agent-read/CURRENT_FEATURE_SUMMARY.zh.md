@@ -67,5 +67,5 @@
 ## V9.1 RTCP / OursV2+5 cm 隔离对比
 
 - `rigid_object_transport` 可按目标语义保持 `EE→object` 或 `RTCP→object`；旧 V9 仍默认 EE，新 Canonical 四策略对比使用 RTCP。
-- 新对比固定 `pregrasp=0.12 m`、归一化夹爪 `open=1.0 / close=0.4`，并保留不可达候选而不做 fallback。
+- 新对比固定 `pregrasp=0.12 m`、归一化夹爪 `open=1.0 / close=0.3`，并保留不可达候选而不做 fallback。
 - 生成、合成和检查命令见 `COMMANDS/planning_compare_v9_1.zh.md`。
