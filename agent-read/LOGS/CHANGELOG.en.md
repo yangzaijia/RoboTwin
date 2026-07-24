@@ -3478,3 +3478,18 @@ Validation: `py_compile`, `bash -n`, three-strategy dry run, and full execution 
 - Code audit fixes the interpretation: V9 uses 0515 Piper/OursV2 URDFIK, not the Canonical 19 cm RTCP. With `gripper_bias=0.12 m`, `_trans_from_gripper_to_endlink` translates by `0.12-0.12=0`. Runner `0.12 m` approach is pregrasp-only, while AnyGrasp `-0.05 m` is only a physical-local-`+X` target offset.
 
 Validation: `py_compile`, four method dry runs, decoding four 1920x1404 PNGs, parsing all four JSONs, and rereading every PNG SHA-256 pass. IDs are Orientation/Fused K1 `L16/R5`, K2 `L14/R16`; Top-score K1 `L8/R3`, reference K2 `L3/R2` with incomplete rigid action; OursV2 saved records K1 `0/0`, K2 `1/1`. All four sheets pass original-resolution visual QA.
+
+## 2026-07-24 (V9.1 Canonical / OursV2+5 cm planning comparison)
+
+- V9 `rigid_object_transport` now selects its attachment reference frame from `--reach_error_pose_source`. The old V9 `ee` default is unchanged; Canonical RTCP experiments use `tcp`, preventing an EE rigid target from being interpreted again as RTCP and receiving the 19 cm tool transform twice.
+- Added a fixed-target preparer, a two-logic/four-strategy runner, and a 2x2 compositor. Canonical undoes the materialized V8 `-5 cm` and treats the candidate center as RTCP; Human Replay removes the historical `14 cm` retreat and changes basis to RTCP. OursV2+5 cm preserves the AnyGrasp 5 cm candidate offset and adds 5 cm to the historical Human Replay 14 cm retreat.
+- Both groups fix `approach_offset_m=0.12` (pregrasp only), `open_gripper=1.0`, and `close_gripper=0.4`. No IK-feasible fallback is introduced and V9 outputs are never overwritten.
+- Isolated intermediates live under `paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9_1_planning_runs/`; final videos are named `v9-1_canonical.mp4` and `v9-1_oursv2-5.mp4`.
+
+Validation: local and pine2 Python `py_compile`, runner `bash -n`, and four-command dry runs for both logics pass. Formal execution plus final FFprobe/full-decode results are recorded later in the same work round.
+
+- The first tmux generation reproduced the known plain-`timeout` issue: FFmpeg/Python received `SIGTTIN` and entered `T/do_signal_stop`. Evidence is preserved as `v9_1_planning_runs_attempt1_sigttin`. The runner now uses `timeout --foreground` with stdin attached to `/dev/null` before regeneration.
+- The second strict-gate audit found Canonical Orientation/Fused/OursV2 stopping before close after a K1 miss, so both requested videos did not actually execute `close=0.4`. That run is preserved as `v9_1_planning_runs_attempt2_strict_reach_gate`. The final visualization disables the K1 close/action gates while still recording misses, preserving original candidates, and adding no fallback.
+- Initial composition failed because `selected_episode.display_name` was missing. Only composition was affected; all eight planning runs remained valid. The compositor now writes the field and was rerun.
+
+Final validation: all eight commands use `open=1.0`, `close=0.4`, and close gate=`0`. All four Canonical summaries record rigid source `tcp`; all four OursV2+5 cm summaries record `ee`. Both final MP4s are H.264/yuv420p, 1280x796 at 30 FPS, 912 frames, and 30.4 seconds; both pass `ffprobe` and full `ffmpeg -nostdin` decode. Original-resolution visual QA at 18 seconds confirms separate headers, all four panes, and grippers displayed at 40% of fully open width.

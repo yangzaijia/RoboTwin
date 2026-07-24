@@ -6476,15 +6476,19 @@ def main() -> None:
                         actor = attached_actor_by_arm.get(arm_name)
                         if actor is None:
                             raise RuntimeError(f"Missing attached object actor for arm={arm_name}")
-                        current_ee_pose = get_current_pose_for_error(renderer, arm_name, "ee")
+                        rigid_pose_source = str(args.reach_error_pose_source)
+                        current_rigid_pose = get_current_pose_for_error(
+                            renderer, arm_name, rigid_pose_source
+                        )
                         current_object_world = actor_pose_world_matrix(actor)
-                        ee_to_object = (
-                            np.linalg.inv(pose_wxyz_to_matrix(current_ee_pose)) @ current_object_world
+                        rigid_frame_to_object = (
+                            np.linalg.inv(pose_wxyz_to_matrix(current_rigid_pose))
+                            @ current_object_world
                         )
                         corrected_target, desired_object_world = rigid_object_transport_target(
                             track=object_tracks[obj_name],
                             action_frame=action_frame,
-                            target_frame_to_object=ee_to_object,
+                            target_frame_to_object=rigid_frame_to_object,
                         )
                         action_targets[arm_name] = corrected_target
                         action_target_debug_by_arm[arm_name] = {
@@ -6495,8 +6499,15 @@ def main() -> None:
                             "actual_tcp_to_object_matrix_at_attachment": np.asarray(
                                 tcp_to_object, dtype=np.float64
                             ).reshape(4, 4).tolist(),
-                            "actual_ee_to_object_matrix_at_attachment": ee_to_object.tolist(),
-                            "target_pose_semantics": "Piper EE/link6 origin with physical gripper-axis orientation",
+                            f"actual_{rigid_pose_source}_to_object_matrix_at_attachment": (
+                                rigid_frame_to_object.tolist()
+                            ),
+                            "rigid_transport_pose_source": rigid_pose_source,
+                            "target_pose_semantics": (
+                                "Piper EE/link6 origin with physical gripper-axis orientation"
+                                if rigid_pose_source == "ee"
+                                else "Piper canonical real-TCP (RTCP) origin and orientation"
+                            ),
                             "desired_object_pose_world_matrix": desired_object_world.tolist(),
                             "rigid_transport_target_pose_world_wxyz": corrected_target.tolist(),
                         }
@@ -7009,15 +7020,19 @@ def main() -> None:
                         raise RuntimeError(f"Missing attached object actor for arm={exec_arm}")
                     independent_target = np.asarray(action_pose, dtype=np.float64).reshape(7).copy()
                     action_frame = int(exec_selected_keyframes[1].source_frame)
-                    current_ee_pose = get_current_pose_for_error(renderer, exec_arm, "ee")
+                    rigid_pose_source = str(args.reach_error_pose_source)
+                    current_rigid_pose = get_current_pose_for_error(
+                        renderer, exec_arm, rigid_pose_source
+                    )
                     current_object_world = actor_pose_world_matrix(attached_actor)
-                    ee_to_object = (
-                        np.linalg.inv(pose_wxyz_to_matrix(current_ee_pose)) @ current_object_world
+                    rigid_frame_to_object = (
+                        np.linalg.inv(pose_wxyz_to_matrix(current_rigid_pose))
+                        @ current_object_world
                     )
                     action_pose, desired_object_world = rigid_object_transport_target(
                         track=object_tracks[exec_object_name],
                         action_frame=action_frame,
-                        target_frame_to_object=ee_to_object,
+                        target_frame_to_object=rigid_frame_to_object,
                     )
                     action_target_debug_by_arm[exec_arm] = {
                         "mode": "rigid_object_transport",
@@ -7027,8 +7042,15 @@ def main() -> None:
                         "actual_tcp_to_object_matrix_at_attachment": np.asarray(
                             tcp_to_object, dtype=np.float64
                         ).reshape(4, 4).tolist(),
-                        "actual_ee_to_object_matrix_at_attachment": ee_to_object.tolist(),
-                        "target_pose_semantics": "Piper EE/link6 origin with physical gripper-axis orientation",
+                        f"actual_{rigid_pose_source}_to_object_matrix_at_attachment": (
+                            rigid_frame_to_object.tolist()
+                        ),
+                        "rigid_transport_pose_source": rigid_pose_source,
+                        "target_pose_semantics": (
+                            "Piper EE/link6 origin with physical gripper-axis orientation"
+                            if rigid_pose_source == "ee"
+                            else "Piper canonical real-TCP (RTCP) origin and orientation"
+                        ),
                         "desired_object_pose_world_matrix": desired_object_world.tolist(),
                         "rigid_transport_target_pose_world_wxyz": np.asarray(
                             action_pose, dtype=np.float64

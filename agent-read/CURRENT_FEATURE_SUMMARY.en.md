@@ -63,3 +63,9 @@
 - Paper assets now cover 6 tasks × 2 episodes: 38 interaction keyframes produce 152 four-strategy images and 38 contact sheets. Each `<TASK>/id<ID>/` directory also contains its episode-specific 4×5 video, config, manifest, and README. LEFT/RIGHT/BOTH are drawn dynamically from keyframe metadata. OursV2 is a `HUMAN TARGET`, not an AnyGrasp candidate, and the old split-panel version remains separate.
 - All twelve 4×5 videos are H.264/yuv420p, 1920×1540, 30 fps, and full-decode clean. Genuine omissions remain `MISSING`: D435 AnyGrasp/human-filtered for `place_bread_basket/id0,id1`, and Dense-v2/legacy repaint for `pnp_tray/id2,id3`. Nothing is cross-paired or fabricated.
 - See `COMMANDS/paper_qualitative_assets.en.md` for reproduction and validation.
+
+## Isolated V9.1 RTCP / OursV2+5 cm comparison
+
+- `rigid_object_transport` can preserve either `EE→object` or `RTCP→object` according to target semantics. Legacy V9 remains EE by default; the new four-strategy Canonical comparison uses RTCP.
+- The comparison fixes `pregrasp=0.12 m` and normalized gripper commands `open=1.0 / close=0.4`, preserving unreachable candidates without fallback.
+- See `COMMANDS/planning_compare_v9_1.en.md` for generation, composition, and validation commands.

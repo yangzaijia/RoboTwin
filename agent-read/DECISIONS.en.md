@@ -91,3 +91,10 @@
 - Rigid transport is not IK-feasible candidate filtering. If Top-score fails K1 reach, preserve the failure and stop; K2 correction must not hide a K1 failure.
 - V9 remains on the 0515 Piper/OursV2 URDFIK path and never switches to the Canonical 19 cm RTCP. Although the config has `gripper_bias=0.12 m`, `_trans_from_gripper_to_endlink` contributes `0.12-gripper_bias=0` translation. Keep the 12 cm model bias, 12 cm pregrasp distance, and AnyGrasp `-5 cm` target offset explicitly separate.
 - Export transform audits per method. Keep separate provenance sheets for Orientation and Fused even when their selections coincide; show `NOT EXECUTED` when Top-score never creates a rigid K2 target; never depict OursV2 as an AnyGrasp-remap chain.
+
+## 2026-07-24: V9.1 rigid-transport frame follows planner-target semantics
+
+- The rigid reference frame must match the planner target: use `ee` for the legacy Piper EE/link6 chain and `tcp` for the Canonical Real-TCP chain.
+- The default remains `ee`, so historical V9 numbers and outputs do not change. Canonical runs must explicitly select `tcp`; an EE target must never be reinterpreted as RTCP.
+- Record `0.12 m pregrasp`, the historical `0.14 m OursV2 target retreat`, the `0.05 m candidate offset`, and the `0.19 m Canonical tool transform` as separate quantities in configs, manifests, and documentation.
+- The simulated gripper command is normalized to `[0,1]`. Paper comparison `close=0.4` means retain 40% of fully open width, not 0.4 meters.

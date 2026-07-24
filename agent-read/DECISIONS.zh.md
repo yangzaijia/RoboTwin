@@ -91,3 +91,10 @@
 - 刚性搬运不等同于 IK-feasible 候选筛选。Top-score K1 不可达时继续保留失败并停止，不能用 K2 修正掩盖 K1 失败。
 - V9 固定使用 0515 Piper/OursV2 URDFIK，不切换到 Canonical 19 cm RTCP。虽然配置中 `gripper_bias=0.12 m`，但 `_trans_from_gripper_to_endlink` 的位置项是 `0.12-gripper_bias=0`；12 cm model bias、12 cm pregrasp 距离和 AnyGrasp `-5 cm` target offset 必须分开命名。
 - 转换审计必须按方法分别导出。Orientation/Fused 即使选择相同也保留两张来源独立的图；Top-score 未形成 K2 rigid target 时必须显示 `NOT EXECUTED`；OursV2 不得伪装成 AnyGrasp remap 链。
+
+## 2026-07-24：V9.1 刚性搬运参考帧跟随规划目标语义
+
+- `rigid_object_transport` 的刚性参考帧必须与 planner target 一致：旧 Piper EE/link6 链使用 `ee`，Canonical Real-TCP 链使用 `tcp`。
+- 默认仍为 `ee`，因此历史 V9 数值与输出不改变；Canonical 只能显式选择 `tcp`，不能把 EE 目标二次解释为 RTCP。
+- `0.12 m pregrasp`、`0.14 m OursV2 历史目标退让`、`0.05 m 候选偏移` 和 `0.19 m Canonical tool transform` 必须在配置、manifest 和说明中分开记录。
+- 仿真夹爪控制接口使用归一化 `[0,1]`；论文对比的 `close=0.4` 表示保持 40% 全开宽度，不是以米为单位的 0.4。

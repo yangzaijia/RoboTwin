@@ -27,3 +27,5 @@ python some_script.py --some-flag
 0515 标定相机安装侧、Curobo/SAPIEN link6 适配与 V5 候选 replay 命令见 `candidate_camera_mount_up_v5.zh.md`。
 
 K1 抓取关系保持到 K2 的刚性物体搬运、六联转换图与 2×2 对比命令见 `rigid_object_transport_v9.zh.md`。
+
+Canonical RTCP 与 OursV2+5 cm 四策略规划对比见 `planning_compare_v9_1.zh.md`。

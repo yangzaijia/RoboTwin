@@ -168,3 +168,10 @@
 - 第二原因：Piper 当前 planner target 点是 EE/link6 原点；物体附着跟随 TCP。若把由 `T_TCP_object` 推出的期望 TCP pose 直接作为 planner target，会留下 EE↔TCP 固定平移。
 - 修复：使用 `--action_target_mode rigid_object_transport`。实现从当前 EE 与当前 actor 建立 `T_EE_object`，再令 `T_W_EE2 = T_W_object2 @ inverse(T_EE_object)`。
 - 检查 `plan_summary.json` 的 `action_target_debug_by_arm`：必须同时包含 `actual_tcp_to_object_matrix_at_attachment`、`actual_ee_to_object_matrix_at_attachment`、`desired_object_pose_world_matrix` 和 `rigid_transport_target_pose_world_wxyz`。
+
+### Canonical 刚性搬运仍出现约 19 cm 固定偏差
+
+- 症状：K1 的 RTCP 正确，但 K2 action 相对物体沿工具方向出现接近 19 cm 的固定偏差。
+- 原因：刚性 target 由 `T_EE_object` 求出后，又被 Canonical planner 当作 RTCP 输入，19 cm tool transform 被错误地再次应用。
+- 修复：Canonical 运行必须传 `--reach_error_pose_source tcp`；planner 会用 `T_RTCP_object` 生成 K2 RTCP target。旧 V9 继续使用 `ee`。
+- 检查 `action_target_debug_by_arm` 的 `rigid_transport_pose_source` 及对应的 `actual_tcp_to_object_matrix_at_attachment` 或 `actual_ee_to_object_matrix_at_attachment`。

@@ -168,3 +168,10 @@
 - Second cause: the current Piper planner target point is the EE/link6 origin, while object attachment follows TCP. Sending a desired TCP pose derived from `T_TCP_object` directly as the planner target leaves the fixed EE-to-TCP translation.
 - Fix: use `--action_target_mode rigid_object_transport`. The implementation measures `T_EE_object` from the current EE and actor, then applies `T_W_EE2 = T_W_object2 @ inverse(T_EE_object)`.
 - Inspect `action_target_debug_by_arm` in `plan_summary.json`. It must contain `actual_tcp_to_object_matrix_at_attachment`, `actual_ee_to_object_matrix_at_attachment`, `desired_object_pose_world_matrix`, and `rigid_transport_target_pose_world_wxyz`.
+
+### Canonical rigid transport still has an approximately 19 cm fixed error
+
+- Symptom: K1 RTCP is correct, but K2 action is displaced from the object by approximately 19 cm along the tool direction.
+- Cause: a rigid target derived from `T_EE_object` was fed to the Canonical planner as RTCP, causing the 19 cm tool transform to be applied again.
+- Fix: Canonical runs must pass `--reach_error_pose_source tcp`; the planner then uses `T_RTCP_object` to construct the K2 RTCP target. Legacy V9 remains on `ee`.
+- Inspect `rigid_transport_pose_source` and the corresponding `actual_tcp_to_object_matrix_at_attachment` or `actual_ee_to_object_matrix_at_attachment` in `action_target_debug_by_arm`.

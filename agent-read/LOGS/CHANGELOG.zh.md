@@ -3476,3 +3476,18 @@ Validation: `py_compile`、`bash -n`、三策略 dry run 与实跑通过；V9 K1
 - 代码审计固定结论：V9 使用 0515 Piper/OursV2 URDFIK，而非 Canonical 19 cm RTCP；`gripper_bias=0.12 m` 时 `_trans_from_gripper_to_endlink` 的位置项为 `0.12-0.12=0`。runner 的 `0.12 m` approach 仅用于 pregrasp，AnyGrasp `-0.05 m` 仅是物理 local `+X` target offset。
 
 Validation: `py_compile`、四方法 dry run、四张 1920×1404 PNG 解码、四份 JSON 解析与 PNG SHA-256 回读通过。候选编号为 Orientation/Fused K1 `L16/R5`、K2 `L14/R16`；Top-score K1 `L8/R3`、K2 参考 `L3/R2` 且 rigid action incomplete；OursV2 保存记录 K1 `0/0`、K2 `1/1`。四张原分辨率视觉 QA 通过。
+
+## 2026-07-24（V9.1 Canonical / OursV2+5 cm 规划对比）
+
+- V9 的 `rigid_object_transport` 现在按 `--reach_error_pose_source` 选择附着参考帧：旧 V9 的 `ee` 默认行为不变；Canonical RTCP 实验使用 `tcp`，避免把 EE 刚性目标再次当作 RTCP 输入而重复引入 19 cm 工具偏移。
+- 新增固定目标准备器、两逻辑四策略 runner 和 2×2 合成器。Canonical 从 V8 物理轴目标撤销已物化的 `-5 cm`，将候选中心作为 RTCP；Human Replay 撤销历史 `14 cm` 并换基为 RTCP。OursV2+5 cm 保留 AnyGrasp 的 5 cm 候选偏移，并对历史 Human Replay 的 14 cm 再叠加 5 cm。
+- 两组均固定 `approach_offset_m=0.12`（只影响 pregrasp）、`open_gripper=1.0`、`close_gripper=0.4`，不增加 IK-feasible fallback，也不覆盖 V9。
+- 输出隔离在 `paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9_1_planning_runs/`，最终视频命名为 `v9-1_canonical.mp4` 与 `v9-1_oursv2-5.mp4`。
+
+Validation: 本地与 pine2 的 Python `py_compile`、runner `bash -n`、两逻辑各四路 dry run 均通过；正式运行与最终 FFprobe/完整解码结果见同轮后续记录。
+
+- 首轮 tmux 生成复现了普通 `timeout` 导致 FFmpeg/Python 收到 `SIGTTIN`、进入 `T/do_signal_stop` 的已知问题；证据完整保留为 `v9_1_planning_runs_attempt1_sigttin`。runner 改为 `timeout --foreground` 且 stdin 连接 `/dev/null` 后重新生成。
+- 第二轮 strict-gate 审计发现 Canonical 的 Orientation/Fused/OursV2 因 K1 miss 在 close 前停止，无法满足两条视频都实际执行 `close=0.4`。该轮保留为 `v9_1_planning_runs_attempt2_strict_reach_gate`；最终可视化关闭 K1 close/action gate，但仍记录 miss、保持原候选且不做 fallback。
+- 首次合成在 `selected_episode.display_name` 缺失处报错；仅影响拼接，八路规划未受影响。合成器补齐字段后重跑。
+
+Final validation: 八路 command 均为 `open=1.0`、`close=0.4`、close gate=`0`。四路 Canonical summary 的 rigid source 均为 `tcp`；四路 OursV2+5 cm 均为 `ee`。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，并通过 `ffprobe` 与 `ffmpeg -nostdin` 完整解码。18 秒原分辨率抽帧视觉 QA 确认 2×2 标题栏与视频分离、四格均存在且夹爪按 40% 全开宽度显示。

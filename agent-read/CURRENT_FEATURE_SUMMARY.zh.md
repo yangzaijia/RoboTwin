@@ -63,3 +63,9 @@
 - 论文素材已扩展为 6 tasks × 2 episodes：38 个交互关键帧导出 152 张四策略单图和 38 张 contact sheet；每个 `<TASK>/id<ID>/` 同目录还包含 episode 专属 4×5 视频、config、manifest 和 README。LEFT/RIGHT/BOTH 按关键帧 metadata 动态绘制，OursV2 是 `HUMAN TARGET`，不是 AnyGrasp candidate；旧左右分栏版独立保留。
 - 12 个 4×5 视频均为 H.264/yuv420p、1920×1540、30 fps 并通过完整解码。`place_bread_basket/id0,id1` 的 D435 AnyGrasp/human-filtered、`pnp_tray/id2,id3` 的 Dense-v2/legacy repaint 确实缺失，保留 `MISSING` 格而不混用或伪造。
 - 复现与验证命令见 `COMMANDS/paper_qualitative_assets.zh.md`。
+
+## V9.1 RTCP / OursV2+5 cm 隔离对比
+
+- `rigid_object_transport` 可按目标语义保持 `EE→object` 或 `RTCP→object`；旧 V9 仍默认 EE，新 Canonical 四策略对比使用 RTCP。
+- 新对比固定 `pregrasp=0.12 m`、归一化夹爪 `open=1.0 / close=0.4`，并保留不可达候选而不做 fallback。
+- 生成、合成和检查命令见 `COMMANDS/planning_compare_v9_1.zh.md`。
