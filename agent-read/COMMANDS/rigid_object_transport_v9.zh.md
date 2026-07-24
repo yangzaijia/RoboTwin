@@ -28,7 +28,8 @@ bash code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
   --run-tag v9_ee_rigid_object_transport_20260723
 ```
 
-V9p 纯净版本：
+历史单条 pure-scene 实验（使用原始 V9 默认 `close=0.0`，不再作为正式
+V9p 交付）：
 
 ```bash
 cd /home/zaijia001/ssd/RoboTwin
@@ -100,8 +101,7 @@ python3 code_painting/compose_v9_rigid_object_transport_grid.py \
   --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
 ```
 
-合成 V9p；合成器会拒绝不是 pure-scene 的前三路输入，并把最终视频原子转为
-H.264 Constrained Baseline、`yuv420p`、faststart：
+合成历史单条 pure-scene 实验：
 
 ```bash
 cd /home/zaijia001/ssd/RoboTwin
@@ -113,11 +113,14 @@ python3 code_painting/compose_v9_rigid_object_transport_grid.py \
   --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
 ```
 
-V9p 输出：
+历史输出：
 
 ```text
 /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9p_pick_diverse_bottles_0_05_rigid_object_transport_clean_2x2.mp4
 ```
+
+正式 `close=0.3` 的 OursV2 与 Canonical-17 两条 V9p 请使用
+`COMMANDS/planning_compare_v9_1.zh.md`。
 
 ## 验证
 

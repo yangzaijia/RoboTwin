@@ -9,11 +9,18 @@ V8_ROOT="$ROOT/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes"
 MODE=""
 GPU=0
 DRY_RUN=0
+PURE_SCENE=0
+DEBUG_VISUALIZE_TARGETS=1
 
 while (($#)); do
   case "$1" in
     --mode) MODE="$2"; shift 2 ;;
     --gpu) GPU="$2"; shift 2 ;;
+    --pure-scene)
+      PURE_SCENE=1
+      DEBUG_VISUALIZE_TARGETS=0
+      shift
+      ;;
     --dry-run) DRY_RUN=1; shift ;;
     *) echo "ERROR unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -40,6 +47,21 @@ case "$MODE" in
     TOOL_LENGTH_M=0.17
     ;;
 esac
+
+if ((PURE_SCENE)); then
+  case "$MODE" in
+    oursv2-5)
+      RUN_ROOT="$RELEASE_ROOT/v9p_planning_runs_oursv2_close03_pure"
+      ;;
+    canonical17)
+      RUN_ROOT="$RELEASE_ROOT/v9p_planning_runs_canonical17_close03_pure"
+      ;;
+    canonical)
+      echo "ERROR pure-scene release is defined for oursv2-5 and canonical17" >&2
+      exit 2
+      ;;
+  esac
+fi
 
 source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
@@ -162,7 +184,7 @@ run_one() {
     --save_debug_preview 0
     --save_debug_execution_preview 0
     --save_pose_debug 1
-    --debug_visualize_targets 1
+    --debug_visualize_targets "$DEBUG_VISUALIZE_TARGETS"
     --debug_candidate_top_k 0
     --debug_common_candidate_top_k 0
     --debug_visualize_selected_keyframe_axes 0
@@ -176,7 +198,7 @@ run_one() {
     --joint_target_wait_steps 300
     --joint_target_wait_tol_rad 0.01
     --hold_frames_after_stage 8
-    --pure_scene_output 0
+    --pure_scene_output "$PURE_SCENE"
     --overlay_text 0
     --head_only 0
     --third_person_view 1

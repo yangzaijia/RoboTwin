@@ -3517,3 +3517,11 @@ Validation: pine2 `py_compile`, `bash -n`, and both dry runs pass; each group co
 - Source auditing found no corruption in `v9-1_oursv2-5.mp4`: faststart, all 912 frames decode, and OpenCV reads both endpoints. To address client playback compatibility, the original path was atomically re-encoded as Constrained Baseline and a same-content `_compat.mp4` fallback path was added.
 
 Validation: all three V9p dry-run commands contain `pure=1/debug=0`, and all three formal runs exit zero. Against original V9, selected poses and every pregrasp/grasp/action target pose have zero maximum absolute delta, with identical stage reach/miss outcomes. Original-resolution QA at six seconds confirms colored target axes in old V9 and their removal from all first-three V9p panes; the historical OursV2 fourth pane is unchanged. Final V9p is H.264 Constrained Baseline/yuv420p, 1280x796, 30 FPS, 642 frames, and 21.4 seconds with faststart and full-decode success.
+
+## 2026-07-24 (correct V9p to two close=0.3 OursV2/Canonical videos)
+
+- Auditing found that the previous single-video V9p inherited original V9's default `close_gripper=0.0`, conflicting with the previously established `0.3`; it is now legacy.
+- Added `--pure-scene` to `run_v9_1_planning_compare_pick_diverse_id0.sh`, with isolated output roots for `oursv2-5` and `canonical17` while retaining explicit `open=1.0 / close=0.3`.
+- `compose_v9_1_planning_compare_grid.py` now formally produces `v9p_oursv2.mp4` and `v9p_canonical.mp4`. It validates all four pane summaries/commands before composition, normalizes to Constrained Baseline, and refreshes the manifest afterward.
+
+Validation: both dry runs contain exactly four prepare plus four run commands, and all eight formal runs exit zero. Against each non-clean reference, prepared poses and every pregrasp/grasp/action target pose have zero maximum delta, with identical stage reach/miss outcomes. All eight commands confirm `open=1.0 / close=0.3 / pure=1 / debug=0`. Both final videos are H.264 Constrained Baseline/yuv420p, 1280x796, 30 FPS, 912 frames, and 30.4 seconds with full-decode success; original-resolution QA at 18 seconds confirms no target axes/debug grippers in any pane and explicit `CLOSE=0.3` titles.

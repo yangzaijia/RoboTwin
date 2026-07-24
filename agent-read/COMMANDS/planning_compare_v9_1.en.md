@@ -46,6 +46,17 @@ code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh --mode oursv2-5 --gp
 code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh --mode canonical17 --gpu 2
 ```
 
+Generate the two formal V9p clean variants. Both groups still explicitly use
+`open=1.0 / close=0.3`:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh \
+  --mode oursv2-5 --pure-scene --gpu 3
+code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh \
+  --mode canonical17 --pure-scene --gpu 2
+```
+
 Compose the final videos:
 
 ```bash
@@ -56,6 +67,18 @@ python3 code_painting/compose_v9_1_planning_compare_grid.py \
 python3 code_painting/compose_v9_1_planning_compare_grid.py \
   --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
   --logic canonical17
+```
+
+Compose both V9p videos:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+python3 code_painting/compose_v9_1_planning_compare_grid.py \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --logic oursv2-5 --pure-scene
+python3 code_painting/compose_v9_1_planning_compare_grid.py \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --logic canonical17 --pure-scene
 ```
 
 Inspect encoding and full decode:
@@ -76,6 +99,10 @@ ffmpeg -v error -i /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outpu
 - Preserved 19 cm video: `.../matched_candidate_image_video_release_20260722/v9-1_canonical.mp4`
 - Corrected video overwritten at its original path: `.../matched_candidate_image_video_release_20260722/v9-1_oursv2-5.mp4`
 - New 17 cm video: `.../matched_candidate_image_video_release_20260722/v9-2_canonical.mp4`
+- Formal V9p OursV2: `.../matched_candidate_image_video_release_20260722/v9p_oursv2.mp4`
+- Formal V9p Canonical-17: `.../matched_candidate_image_video_release_20260722/v9p_canonical.mp4`
+- V9p OursV2 per-pane results: `.../v9p_planning_runs_oursv2_close03_pure/`
+- V9p Canonical-17 per-pane results: `.../v9p_planning_runs_canonical17_close03_pure/`
 - Corrected-retreat per-pane results: `.../v9_1_planning_runs_close03_grasp_retreat05/`
 - Canonical-17 cm per-pane results: `.../v9_2_planning_runs_canonical17_close03/`
 - Original 19 cm `close=0.3` per-pane results remain under: `.../v9_1_planning_runs_close03/`

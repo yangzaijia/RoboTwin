@@ -3515,3 +3515,11 @@ Validation: pine2 `py_compile`、`bash -n` 与两组 dry-run 通过；每组精�
 - `v9-1_oursv2-5.mp4` 的源文件审计未发现损坏：faststart、912 帧完整解码、OpenCV 首尾帧可读。为解决客户端播放兼容，原路径已原子重编码为 Constrained Baseline，并新增同内容 `_compat.mp4` 备用路径。
 
 Validation: V9p 三路 dry-run 精确为 `pure=1/debug=0`，三路实跑 exit 均为 0。与原 V9 比较，selected poses 和所有 pregrasp/grasp/action target poses 最大绝对差均为 `0`，stage reach/miss 完全一致。6 秒原分辨率对照确认旧 V9 彩色目标轴存在而 V9p 前三格已清除；第四格保持历史 OursV2。最终 V9p 为 H.264 Constrained Baseline/yuv420p、1280×796、30 FPS、642 帧、21.4 秒，faststart 且完整解码通过。
+
+## 2026-07-24（V9p 修正为 OursV2/Canonical 两条 close=0.3）
+
+- 审计发现上一条单视频 V9p 继承原始 V9 runner 默认 `close_gripper=0.0`，不符合用户此前确定的 `0.3`，因此降级为 legacy。
+- `run_v9_1_planning_compare_pick_diverse_id0.sh` 新增 `--pure-scene`，为 `oursv2-5` 与 `canonical17` 分别使用独立输出目录，同时保持显式 `open=1.0 / close=0.3`。
+- `compose_v9_1_planning_compare_grid.py` 为 pure-scene 输出正式生成 `v9p_oursv2.mp4` 与 `v9p_canonical.mp4`；合成前验证四格 summary/command，合成后转为 Constrained Baseline 并刷新 manifest。
+
+Validation: 两组 dry-run 均精确为 4 prepare + 4 run，八路正式运行 exit 均为 0。相对各自非纯净参考，prepared poses 与全部 pregrasp/grasp/action target poses 最大差均为 `0`，stage reach/miss 完全一致；八路均确认 `open=1.0 / close=0.3 / pure=1 / debug=0`。两条最终视频均为 H.264 Constrained Baseline/yuv420p、1280×796、30 FPS、912 帧、30.4 秒并通过完整解码；18 秒原分辨率 QA 确认四格均无目标轴/调试夹爪且标题明确 `CLOSE=0.3`。

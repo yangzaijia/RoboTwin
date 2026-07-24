@@ -29,7 +29,8 @@ bash code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
   --run-tag v9_ee_rigid_object_transport_20260723
 ```
 
-V9p clean variant:
+Historical single pure-scene experiment (uses original V9's default
+`close=0.0` and is no longer the formal V9p deliverable):
 
 ```bash
 cd /home/zaijia001/ssd/RoboTwin
@@ -101,9 +102,7 @@ python3 code_painting/compose_v9_rigid_object_transport_grid.py \
   --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
 ```
 
-Compose V9p. The compositor rejects first-three-pane inputs that are not
-pure-scene and atomically normalizes the final video to H.264 Constrained
-Baseline, `yuv420p`, and faststart:
+Compose the historical single pure-scene experiment:
 
 ```bash
 cd /home/zaijia001/ssd/RoboTwin
@@ -115,11 +114,14 @@ python3 code_painting/compose_v9_rigid_object_transport_grid.py \
   --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
 ```
 
-V9p output:
+Historical output:
 
 ```text
 /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9p_pick_diverse_bottles_0_05_rigid_object_transport_clean_2x2.mp4
 ```
+
+For the formal `close=0.3` OursV2 and Canonical-17 V9p videos, use
+`COMMANDS/planning_compare_v9_1.en.md`.
 
 ## Validation
 

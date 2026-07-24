@@ -74,6 +74,7 @@
 
 ## V9p 纯净定性视频
 
-- V9p 复用原 V9 的 Orientation、Fused、Top-score 规划链，前三格只打开 `pure_scene_output=1` 并关闭 `debug_visualize_targets`；候选、K1/K2 targets、reach 结果和 rigid transport 不变。
-- 第四格继续使用未修改的历史 OursV2。最终 2×2 视频不显示前三格的彩色目标坐标轴或调试夹爪。
-- V9p 输出采用 H.264 Constrained Baseline、`yuv420p` 与 faststart；生成命令见 `COMMANDS/rigid_object_transport_v9.zh.md`。
+- 正式 V9p 有两条：`v9p_oursv2.mp4` 对应修正后的 `v9-1_oursv2-5`，`v9p_canonical.mp4` 对应 17 cm 的 `v9-2_canonical`。
+- 两条四格均显式 `open=1.0 / close=0.3 / pure_scene_output=1 / debug_visualize_targets=0`；候选、prepared poses、stage targets 与 reach/miss 均和对应非纯净版本一致。
+- 两条均为 H.264 Constrained Baseline、`yuv420p` 与 faststart。早期单条原始 V9 pure-scene 使用默认 `close=0.0`，只保留作 legacy，不作为正式 V9p。
+- 生成命令见 `COMMANDS/planning_compare_v9_1.zh.md`。

@@ -46,6 +46,16 @@ code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh --mode oursv2-5 --gp
 code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh --mode canonical17 --gpu 2
 ```
 
+生成两条正式 V9p 纯净版；两组仍显式 `open=1.0 / close=0.3`：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh \
+  --mode oursv2-5 --pure-scene --gpu 3
+code_painting/run_v9_1_planning_compare_pick_diverse_id0.sh \
+  --mode canonical17 --pure-scene --gpu 2
+```
+
 合成最终视频：
 
 ```bash
@@ -56,6 +66,18 @@ python3 code_painting/compose_v9_1_planning_compare_grid.py \
 python3 code_painting/compose_v9_1_planning_compare_grid.py \
   --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
   --logic canonical17
+```
+
+合成两条 V9p：
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+python3 code_painting/compose_v9_1_planning_compare_grid.py \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --logic oursv2-5 --pure-scene
+python3 code_painting/compose_v9_1_planning_compare_grid.py \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --logic canonical17 --pure-scene
 ```
 
 检查编码和完整解码：
@@ -76,6 +98,10 @@ ffmpeg -v error -i /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outpu
 - 保留的 19 cm 视频：`.../matched_candidate_image_video_release_20260722/v9-1_canonical.mp4`
 - 原路径覆盖的修正视频：`.../matched_candidate_image_video_release_20260722/v9-1_oursv2-5.mp4`
 - 新 17 cm 视频：`.../matched_candidate_image_video_release_20260722/v9-2_canonical.mp4`
+- 正式 V9p OursV2：`.../matched_candidate_image_video_release_20260722/v9p_oursv2.mp4`
+- 正式 V9p Canonical-17：`.../matched_candidate_image_video_release_20260722/v9p_canonical.mp4`
+- V9p OursV2 单路结果：`.../v9p_planning_runs_oursv2_close03_pure/`
+- V9p Canonical-17 单路结果：`.../v9p_planning_runs_canonical17_close03_pure/`
 - 修正 retreat 的单路结果：`.../v9_1_planning_runs_close03_grasp_retreat05/`
 - Canonical-17 cm 单路结果：`.../v9_2_planning_runs_canonical17_close03/`
 - 原 19 cm `close=0.3` 单路结果保留在：`.../v9_1_planning_runs_close03/`

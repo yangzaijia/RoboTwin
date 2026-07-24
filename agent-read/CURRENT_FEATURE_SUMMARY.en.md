@@ -74,6 +74,7 @@
 
 ## V9p clean qualitative video
 
-- V9p reuses the original V9 Orientation, Fused, and Top-score planning chain. The first three panes only enable `pure_scene_output=1` and disable `debug_visualize_targets`; candidates, K1/K2 targets, reach outcomes, and rigid transport are unchanged.
-- The fourth pane continues to use the unchanged historical OursV2 reference. The final 2x2 video contains no colored target axes or debug grippers in the first three panes.
-- V9p is delivered as H.264 Constrained Baseline, `yuv420p`, and faststart. See `COMMANDS/rigid_object_transport_v9.en.md`.
+- Formal V9p has two videos: `v9p_oursv2.mp4` matches corrected `v9-1_oursv2-5`, and `v9p_canonical.mp4` matches the 17 cm `v9-2_canonical`.
+- All four panes in both videos explicitly use `open=1.0 / close=0.3 / pure_scene_output=1 / debug_visualize_targets=0`. Candidates, prepared poses, stage targets, and reach/miss outcomes match the corresponding non-clean videos.
+- Both videos use H.264 Constrained Baseline, `yuv420p`, and faststart. The earlier single original-V9 pure-scene experiment used default `close=0.0`; it remains legacy and is not formal V9p.
+- See `COMMANDS/planning_compare_v9_1.en.md`.

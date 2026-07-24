@@ -112,3 +112,10 @@
 - Keep the historical OursV2 fourth-pane video unchanged rather than rerunning it solely for visual uniformity.
 - The V9p compositor must verify that all first-three-pane summaries are pure-scene and reject invalid inputs.
 - Deliver paper videos as H.264 Constrained Baseline, `yuv420p`, and faststart to avoid client-specific High Profile playback differences.
+
+## 2026-07-24: formal V9p is the two close=0.3 branches
+
+- Withdraw the statement that the single original-V9 pure-scene video is formal V9p. Original V9 did not pass a close value and therefore used `close_gripper=0.0`.
+- Formal V9p must separately match the corrected OursV2+5 cm and Canonical-17 branches, both with explicit `close=0.3`.
+- Rerender all four panes in both videos as pure-scene rather than pixel-editing only the first three, keeping command, summary, and visual contracts consistent.
+- Retain the single `close=0.0` video only as a legacy audit and do not cite it as a formal paper asset.

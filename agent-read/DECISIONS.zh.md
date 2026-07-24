@@ -112,3 +112,10 @@
 - OursV2 第四格保持原历史视频，不为统一外观而重跑或改写。
 - V9p compositor 必须验证前三路 summary 为 pure-scene，否则拒绝合成。
 - 论文交付视频统一为 H.264 Constrained Baseline、`yuv420p`、faststart，以规避客户端对 High Profile 的兼容差异。
+
+## 2026-07-24：正式 V9p 固定为两个 close=0.3 分支
+
+- 撤销“原始 V9 的单条 pure-scene 即正式 V9p”的表述；原始 V9 未显式传关闭值，实际默认 `close_gripper=0.0`。
+- 正式 V9p 必须分别对应修正后的 OursV2+5 cm 分支与 Canonical-17 分支，两条均显式 `close=0.3`。
+- 两条的四格都重新 pure-scene 渲染，不能仅删除前三格像素叠加后复用第四格，以便命令、summary 和画面契约完全一致。
+- 旧单条 `close=0.0` 视频保留作 legacy 审计，不再引用为论文正式素材。
