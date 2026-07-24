@@ -105,3 +105,10 @@
 - OursV2 第四格恢复原 V9 的 14 cm 人手目标 retreat，不再叠加 5 cm。
 - Canonical 17 cm 是运行级实验覆盖，不修改 Piper 服务器字面量、Canonical-v1 默认 19 cm 或旧 V9.1 输出。
 - V9.2 保持 RTCP target 与候选完全不变；17 cm 只改变 RTCP 逆工具变换得到的 link6 IK target。
+
+## 2026-07-24：V9p 只做纯净渲染，不建立新规划逻辑
+
+- V9p 必须复用 V9 的候选、IK、K1/K2 target、retreat 和 rigid-object-transport 参数；版本差异仅是前三格 `pure_scene_output=1`、`debug_visualize_targets=0`。
+- OursV2 第四格保持原历史视频，不为统一外观而重跑或改写。
+- V9p compositor 必须验证前三路 summary 为 pure-scene，否则拒绝合成。
+- 论文交付视频统一为 H.264 Constrained Baseline、`yuv420p`、faststart，以规避客户端对 High Profile 的兼容差异。

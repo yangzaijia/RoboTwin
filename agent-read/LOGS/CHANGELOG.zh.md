@@ -3507,3 +3507,11 @@ Validation: 两组 batch 均返回 0；八路 command 与 prepared summary 均�
 - compositor 原路径覆盖修正后的 `v9-1_oursv2-5.mp4`，并新增 `v9-2_canonical.mp4`。两组都保持 `pregrasp=0.12 m`、`open=1.0`、`close=0.3`，且不引入 IK-feasible fallback。
 
 Validation: pine2 `py_compile`、`bash -n` 与两组 dry-run 通过；每组精确包含四路 prepare/run。真实 summary 审计确认前三个 `oursv2-5` 方法的 4 个目标均为 `-0.050000000 m @ local +X`，OursV2 的 4 个目标位姿差为 `0`。V9.2 四种方法的 RTCP targets 与 19 cm V9.1 最大绝对差为 `0`；17 cm 逆工具变换只使 link6 target 沿物理 RTCP `+X`（canonical `+Z`）前移 `0.020000000 m`。两个 batch 共八路均产出并返回 0；IK miss 如实保留，不作 fallback。`python tests/test_piper_canonical_tcp_v1.py -v` 的 10 个测试通过（环境无 pytest，未安装新依赖）。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，完整解码通过；18 秒原分辨率抽帧确认标题与画面分离、无标题重叠。
+
+## 2026-07-24（V9p 纯净视频与 V9.1 播放兼容）
+
+- `run_v9_rigid_object_transport_pick_diverse_id0.sh` 新增默认关闭的 `--pure-scene`；只在显式启用时设置 `pure_scene_output=1`、`debug_visualize_targets=0`。同时记录每路完整命令/exit code，并使用 foreground timeout。
+- `compose_v9_rigid_object_transport_grid.py` 新增 `--variant v9p`。它验证前三路 summary 确为 pure-scene，使用历史 OursV2 第四格，输出独立 V9p config/manifest/MP4，并原子转为 Constrained Baseline。
+- `v9-1_oursv2-5.mp4` 的源文件审计未发现损坏：faststart、912 帧完整解码、OpenCV 首尾帧可读。为解决客户端播放兼容，原路径已原子重编码为 Constrained Baseline，并新增同内容 `_compat.mp4` 备用路径。
+
+Validation: V9p 三路 dry-run 精确为 `pure=1/debug=0`，三路实跑 exit 均为 0。与原 V9 比较，selected poses 和所有 pregrasp/grasp/action target poses 最大绝对差均为 `0`，stage reach/miss 完全一致。6 秒原分辨率对照确认旧 V9 彩色目标轴存在而 V9p 前三格已清除；第四格保持历史 OursV2。最终 V9p 为 H.264 Constrained Baseline/yuv420p、1280×796、30 FPS、642 帧、21.4 秒，faststart 且完整解码通过。

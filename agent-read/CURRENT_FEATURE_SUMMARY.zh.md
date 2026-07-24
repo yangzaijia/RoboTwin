@@ -71,3 +71,9 @@
 - `v9-1_oursv2-5.mp4` 已重新定义为：前三个 AnyGrasp 方法相对旧 V9 grasp target 再退 5 cm；第四格保持历史 OursV2 14 cm retreat，不再额外加 5 cm。
 - 新 `v9-2_canonical.mp4` 复用不变的 RTCP targets，只在隔离运行中将活动工具长度由 19 cm 改为 17 cm；Canonical-v1 默认与 Piper 服务器字面量仍为 19 cm。
 - 生成、合成和检查命令见 `COMMANDS/planning_compare_v9_1.zh.md`。
+
+## V9p 纯净定性视频
+
+- V9p 复用原 V9 的 Orientation、Fused、Top-score 规划链，前三格只打开 `pure_scene_output=1` 并关闭 `debug_visualize_targets`；候选、K1/K2 targets、reach 结果和 rigid transport 不变。
+- 第四格继续使用未修改的历史 OursV2。最终 2×2 视频不显示前三格的彩色目标坐标轴或调试夹爪。
+- V9p 输出采用 H.264 Constrained Baseline、`yuv420p` 与 faststart；生成命令见 `COMMANDS/rigid_object_transport_v9.zh.md`。

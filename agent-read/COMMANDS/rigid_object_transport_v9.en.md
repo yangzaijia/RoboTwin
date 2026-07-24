@@ -10,10 +10,15 @@ Keep V8 candidate selection and K1 targets unchanged, preserve `T_EE_object` aft
 bash /home/zaijia001/ssd/RoboTwin/code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
   --gpu <GPU_ID> \
   --run-tag <ISOLATED_RUN_TAG> \
+  [--pure-scene] \
   --strategy <orientation|fused|topscore>
 ```
 
 Omit `--strategy` to run all three strategies sequentially. No V8 file is modified or overwritten.
+`--pure-scene` is disabled by default. When enabled, it uses both
+`pure_scene_output=1` and `debug_visualize_targets=0`, removing only rendered
+debug grippers, target axes, and overlays without changing candidates, IK,
+retreat, or rigid transport.
 
 ## Runnable example
 
@@ -22,6 +27,16 @@ cd /home/zaijia001/ssd/RoboTwin
 bash code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
   --gpu 2 \
   --run-tag v9_ee_rigid_object_transport_20260723
+```
+
+V9p clean variant:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+bash code_painting/run_v9_rigid_object_transport_pick_diverse_id0.sh \
+  --gpu 2 \
+  --run-tag v9p_ee_rigid_object_transport_clean_20260724 \
+  --pure-scene
 ```
 
 ## Export four method-specific six-panel transform audits
@@ -84,6 +99,26 @@ python3 code_painting/compose_v9_rigid_object_transport_grid.py \
   --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
   --run-tag v9_ee_rigid_object_transport_20260723 \
   --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
+```
+
+Compose V9p. The compositor rejects first-three-pane inputs that are not
+pure-scene and atomically normalizes the final video to H.264 Constrained
+Baseline, `yuv420p`, and faststart:
+
+```bash
+cd /home/zaijia001/ssd/RoboTwin
+python3 code_painting/compose_v9_rigid_object_transport_grid.py \
+  --robotwin-root /home/zaijia001/ssd/RoboTwin \
+  --asset-root /home/zaijia001/ssd/data/piper/paper_qualitative_assets \
+  --run-tag v9p_ee_rigid_object_transport_clean_20260724 \
+  --variant v9p \
+  --output-dir /home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722
+```
+
+V9p output:
+
+```text
+/home/zaijia001/ssd/data/piper/paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v9p_pick_diverse_bottles_0_05_rigid_object_transport_clean_2x2.mp4
 ```
 
 ## Validation

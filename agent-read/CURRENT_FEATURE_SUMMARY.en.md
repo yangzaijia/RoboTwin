@@ -71,3 +71,9 @@
 - `v9-1_oursv2-5.mp4` now means that the first three AnyGrasp methods retreat another 5 cm from the old V9 grasp target, while the fourth pane preserves the historical OursV2 14 cm retreat without an extra 5 cm.
 - New `v9-2_canonical.mp4` reuses unchanged RTCP targets and changes only the isolated active tool length from 19 cm to 17 cm. Canonical-v1 and the Piper server literal remain 19 cm by default.
 - See `COMMANDS/planning_compare_v9_1.en.md` for generation, composition, and validation commands.
+
+## V9p clean qualitative video
+
+- V9p reuses the original V9 Orientation, Fused, and Top-score planning chain. The first three panes only enable `pure_scene_output=1` and disable `debug_visualize_targets`; candidates, K1/K2 targets, reach outcomes, and rigid transport are unchanged.
+- The fourth pane continues to use the unchanged historical OursV2 reference. The final 2x2 video contains no colored target axes or debug grippers in the first three panes.
+- V9p is delivered as H.264 Constrained Baseline, `yuv420p`, and faststart. See `COMMANDS/rigid_object_transport_v9.en.md`.

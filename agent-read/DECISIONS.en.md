@@ -105,3 +105,10 @@
 - Restore the fourth OursV2 pane to its original V9 14 cm human-target retreat, with no extra 5 cm.
 - Canonical 17 cm is a run-scoped experimental override. It does not change the Piper server literal, the Canonical-v1 19 cm default, or prior V9.1 output.
 - V9.2 keeps RTCP targets and candidates identical. The 17 cm value changes only the link6 IK target produced by the inverse RTCP tool transform.
+
+## 2026-07-24: V9p is a clean render, not a new planning method
+
+- V9p must reuse V9 candidates, IK, K1/K2 targets, retreat, and rigid-object-transport parameters. The only first-three-pane differences are `pure_scene_output=1` and `debug_visualize_targets=0`.
+- Keep the historical OursV2 fourth-pane video unchanged rather than rerunning it solely for visual uniformity.
+- The V9p compositor must verify that all first-three-pane summaries are pure-scene and reject invalid inputs.
+- Deliver paper videos as H.264 Constrained Baseline, `yuv420p`, and faststart to avoid client-specific High Profile playback differences.

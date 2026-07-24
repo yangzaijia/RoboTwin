@@ -7,6 +7,8 @@ PLANNER_ROOT="$ROOT/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes
 RUN_TAG=v9_ee_rigid_object_transport_20260723
 GPU=2
 DRY_RUN=0
+PURE_SCENE=0
+DEBUG_VISUALIZE_TARGETS=1
 STRATEGIES=(orientation fused topscore)
 
 while (($# > 0)); do
@@ -14,6 +16,11 @@ while (($# > 0)); do
     --gpu) GPU="$2"; shift 2 ;;
     --run-tag) RUN_TAG="$2"; shift 2 ;;
     --strategy) STRATEGIES=("$2"); shift 2 ;;
+    --pure-scene)
+      PURE_SCENE=1
+      DEBUG_VISUALIZE_TARGETS=0
+      shift
+      ;;
     --dry-run) DRY_RUN=1; shift ;;
     *) echo "ERROR unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -91,7 +98,7 @@ run_strategy() {
     --save_debug_preview 1
     --save_debug_execution_preview 0
     --save_pose_debug 1
-    --debug_visualize_targets 1
+    --debug_visualize_targets "$DEBUG_VISUALIZE_TARGETS"
     --debug_candidate_top_k 0
     --debug_common_candidate_top_k 0
     --debug_visualize_selected_keyframe_axes 0
@@ -105,7 +112,7 @@ run_strategy() {
     --joint_target_wait_steps 300
     --joint_target_wait_tol_rad 0.01
     --hold_frames_after_stage 8
-    --pure_scene_output 0
+    --pure_scene_output "$PURE_SCENE"
     --overlay_text 0
     --head_only 0
     --third_person_view 1
@@ -127,7 +134,17 @@ run_strategy() {
     return 0
   fi
   mkdir -p "$output_dir"
-  timeout 900 "${command[@]}" >"$log" 2>&1
+  printf '%q ' "${command[@]}" >"$output_dir/command.sh.txt"
+  printf '\n' >>"$output_dir/command.sh.txt"
+  set +e
+  timeout --foreground 900 "${command[@]}" </dev/null >"$log" 2>&1
+  local status=$?
+  set -e
+  printf '%s\n' "$status" >"$output_dir/exit_code.txt"
+  if ((status != 0)); then
+    echo "ERROR strategy=$strategy status=$status log=$log" >&2
+    return "$status"
+  fi
   echo "[done] strategy=$strategy output=$output_dir log=$log"
 }
 

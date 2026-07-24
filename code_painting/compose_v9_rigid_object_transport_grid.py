@@ -14,6 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--robotwin-root", type=Path, required=True)
     parser.add_argument("--asset-root", type=Path, required=True)
     parser.add_argument("--run-tag", default="v9_ee_rigid_object_transport_20260723")
+    parser.add_argument("--variant", choices=["v9", "v9p"], default="v9")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
@@ -37,6 +38,130 @@ def duration(path: Path) -> float:
     )
 
 
+def make_baseline_compatible(path: Path) -> None:
+    temporary = path.with_name(f".{path.stem}.baseline.tmp.mp4")
+    if temporary.exists():
+        temporary.unlink()
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-v",
+                "error",
+                "-y",
+                "-i",
+                str(path),
+                "-an",
+                "-c:v",
+                "libx264",
+                "-profile:v",
+                "baseline",
+                "-level:v",
+                "3.2",
+                "-preset",
+                "medium",
+                "-crf",
+                "20",
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+                str(temporary),
+            ],
+            check=True,
+        )
+        probe = json.loads(
+            subprocess.check_output(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=codec_name,profile,pix_fmt",
+                    "-of",
+                    "json",
+                    str(temporary),
+                ],
+                text=True,
+            )
+        )
+        stream = probe["streams"][0]
+        if (
+            stream.get("codec_name") != "h264"
+            or stream.get("profile") != "Constrained Baseline"
+            or stream.get("pix_fmt") != "yuv420p"
+        ):
+            raise ValueError(f"Unexpected compatibility output: {stream}")
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-v",
+                "error",
+                "-i",
+                str(temporary),
+                "-f",
+                "null",
+                "-",
+            ],
+            check=True,
+        )
+        temporary.replace(path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def refresh_manifest_output_probe(manifest_path: Path, output_path: Path) -> None:
+    probe = json.loads(
+        subprocess.check_output(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                (
+                    "stream=codec_name,profile,pix_fmt,width,height,"
+                    "avg_frame_rate,r_frame_rate,nb_frames:"
+                    "format=format_name,duration,size"
+                ),
+                "-of",
+                "json",
+                str(output_path),
+            ],
+            text=True,
+        )
+    )
+    stream = probe["streams"][0]
+    container = probe["format"]
+    frame_rate = stream["avg_frame_rate"]
+    numerator, denominator = (int(value) for value in frame_rate.split("/"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["output"]["probe"] = {
+        "codec": stream["codec_name"],
+        "profile": stream.get("profile"),
+        "width": int(stream["width"]),
+        "height": int(stream["height"]),
+        "pix_fmt": stream["pix_fmt"],
+        "avg_frame_rate": frame_rate,
+        "avg_fps": numerator / denominator,
+        "r_frame_rate": stream["r_frame_rate"],
+        "nb_frames": int(stream["nb_frames"]),
+        "duration": float(container["duration"]),
+        "container": container["format_name"],
+        "size_bytes": int(container["size"]),
+    }
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     args = parse_args()
     planner_root = args.robotwin_root / "code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes"
@@ -53,17 +178,57 @@ def main() -> int:
     missing = [str(path) for path in videos.values() if not path.is_file()]
     if missing:
         raise FileNotFoundError("Missing input videos:\n" + "\n".join(missing))
+    if args.variant == "v9p":
+        invalid: list[str] = []
+        for strategy in ("orientation", "fused", "topscore"):
+            summary_path = videos[strategy].with_name("plan_summary.json")
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            if int(summary.get("pure_scene_output", -1)) != 1:
+                invalid.append(f"{strategy}: pure_scene_output != 1")
+            arm_debugs = summary.get("arm_debugs") or {}
+            if any(
+                bool(debug.get("debug_visualize_targets"))
+                for debug in arm_debugs.values()
+                if isinstance(debug, dict)
+            ):
+                invalid.append(f"{strategy}: target-axis actor remains enabled")
+        if invalid:
+            raise ValueError(
+                "V9p requires clean per-strategy videos:\n" + "\n".join(invalid)
+            )
     target_duration = max(duration(path) for path in videos.values())
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    config_path = args.output_dir / "v9_pick_diverse_bottles_0_05_rigid_object_transport_2x2_config.json"
-    output_name = "v9_pick_diverse_bottles_0_05_rigid_object_transport_2x2.mp4"
-    manifest_name = "v9_pick_diverse_bottles_0_05_rigid_object_transport_2x2_manifest.json"
+    if args.variant == "v9p":
+        output_stem = (
+            "v9p_pick_diverse_bottles_0_05_"
+            "rigid_object_transport_clean_2x2"
+        )
+        display_name = "pick_diverse_bottles / id0 / V9p clean rigid transport"
+        method_suffix = "V9P CLEAN"
+        first_three_group = "NO TARGET AXES OR DEBUG GRIPPERS"
+        extra_notes = [
+            "V9p changes rendering only: pure_scene_output=1 and "
+            "debug_visualize_targets=0 for the first three panes.",
+            "Candidates, IK settings, grasp offsets, and rigid K2 transport "
+            "remain identical to V9.",
+        ]
+    else:
+        output_stem = (
+            "v9_pick_diverse_bottles_0_05_rigid_object_transport_2x2"
+        )
+        display_name = "pick_diverse_bottles / id0 / rigid object transport"
+        method_suffix = "RIGID TRANSPORT"
+        first_three_group = "K1 GRASP KEPT THROUGH K2"
+        extra_notes = []
+    config_path = args.output_dir / f"{output_stem}_config.json"
+    output_name = f"{output_stem}.mp4"
+    manifest_name = f"{output_stem}_manifest.json"
     config = {
         "schema_version": 1,
         "selected_episode": {
             "task": "pick_diverse_bottles",
             "episode_id": 0,
-            "display_name": "pick_diverse_bottles / id0 / rigid object transport",
+            "display_name": display_name,
             "interaction_keyframes": [38, 78],
         },
         "timeline_policy": {
@@ -75,6 +240,7 @@ def main() -> int:
             "After K1 arrival, K2 TCP targets preserve the measured TCP-to-object attachment transform.",
             "The desired object endpoint is the FoundationPose world pose at source frame 78.",
             "OursV2 is the unchanged historical reference.",
+            *extra_notes,
         ],
         "output": {
             "fps": 30,
@@ -99,8 +265,8 @@ def main() -> int:
             {
                 "position": 1,
                 "type": "video",
-                "label": "ORIENTATION | RIGID TRANSPORT",
-                "group": "K1 GRASP KEPT THROUGH K2",
+                "label": f"ORIENTATION | {method_suffix}",
+                "group": first_three_group,
                 "accent": "0x7C3AED",
                 "input": str(videos["orientation"]),
                 "start": 0,
@@ -111,8 +277,8 @@ def main() -> int:
             {
                 "position": 2,
                 "type": "video",
-                "label": "FUSED | RIGID TRANSPORT",
-                "group": "K1 GRASP KEPT THROUGH K2",
+                "label": f"FUSED | {method_suffix}",
+                "group": first_three_group,
                 "accent": "0x2563EB",
                 "input": str(videos["fused"]),
                 "start": 0,
@@ -123,8 +289,12 @@ def main() -> int:
             {
                 "position": 3,
                 "type": "video",
-                "label": "TOP-SCORE | RIGID TRANSPORT",
-                "group": "NO IK-FEASIBLE FALLBACK",
+                "label": f"TOP-SCORE | {method_suffix}",
+                "group": (
+                    first_three_group
+                    if args.variant == "v9p"
+                    else "NO IK-FEASIBLE FALLBACK"
+                ),
                 "accent": "0xDC2626",
                 "input": str(videos["topscore"]),
                 "start": 0,
@@ -159,6 +329,12 @@ def main() -> int:
     subprocess.run(command, check=True, cwd=args.asset_root)
     if not args.dry_run:
         output_path = args.output_dir / output_name
+        if args.variant == "v9p":
+            make_baseline_compatible(output_path)
+        refresh_manifest_output_probe(
+            args.output_dir / manifest_name,
+            output_path,
+        )
         subprocess.run(["ffmpeg", "-v", "error", "-i", str(output_path), "-f", "null", "-"], check=True)
         print(output_path)
     return 0
