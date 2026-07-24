@@ -98,3 +98,10 @@
 - 默认仍为 `ee`，因此历史 V9 数值与输出不改变；Canonical 只能显式选择 `tcp`，不能把 EE 目标二次解释为 RTCP。
 - `0.12 m pregrasp`、`0.14 m OursV2 历史目标退让`、`0.05 m 候选偏移` 和 `0.19 m Canonical tool transform` 必须在配置、manifest 和说明中分开记录。
 - 仿真夹爪控制接口使用归一化 `[0,1]`；当前论文对比的 `close=0.3` 表示保持 30% 全开宽度，不是以米为单位的 0.3。
+
+## 2026-07-24：修正 V9.1 retreat 并隔离 V9.2 17 cm 工具实验
+
+- `oursv2-5` 的 5 cm 只加到 Orientation/Fused/Top-score 的 V9 grasp target；历史 V8 目标已有 5 cm，因此它们距 raw candidate center 总退 10 cm。
+- OursV2 第四格恢复原 V9 的 14 cm 人手目标 retreat，不再叠加 5 cm。
+- Canonical 17 cm 是运行级实验覆盖，不修改 Piper 服务器字面量、Canonical-v1 默认 19 cm 或旧 V9.1 输出。
+- V9.2 保持 RTCP target 与候选完全不变；17 cm 只改变 RTCP 逆工具变换得到的 link6 IK target。

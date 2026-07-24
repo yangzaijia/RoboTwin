@@ -3499,3 +3499,11 @@ Final validation: 八路 command 均为 `open=1.0`、`close=0.4`、close gate=`0
 - 最终 `v9-1_canonical.mp4` 与 `v9-1_oursv2-5.mp4` 按用户要求原地覆盖。
 
 Validation: 两组 batch 均返回 0；八路 command 与 prepared summary 均为 `close=0.3`。和旧 `close=0.4` 版逐项比较全部 selected target pose，最大绝对差为 `0.0`，证明本轮未改变 retreat、候选或朝向。两份 config 的四路输入均来自 `v9_1_planning_runs_close03/`，标题为 `CLOSE=0.3`。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，并通过完整解码；18 秒原分辨率抽帧视觉 QA 通过。
+
+## 2026-07-24（V9.1 retreat 修正与 V9.2 Canonical 17 cm）
+
+- 修正 `prepare_v9_1_reuse_summary.py`：Orientation/Fused/Top-score 在旧 V9/V8 抓取目标上再沿 Piper local `+X` 负向退 5 cm；OursV2 保持历史 14 cm 目标，不再额外退 5 cm。
+- runner 新增隔离的 `canonical17` 模式。它复用 Canonical RTCP targets，但以运行级 `PIPER_CANONICAL_TOOL_LENGTH_M=0.17` 执行；默认/服务器 19 cm 语义不变。
+- compositor 原路径覆盖修正后的 `v9-1_oursv2-5.mp4`，并新增 `v9-2_canonical.mp4`。两组都保持 `pregrasp=0.12 m`、`open=1.0`、`close=0.3`，且不引入 IK-feasible fallback。
+
+Validation: pine2 `py_compile`、`bash -n` 与两组 dry-run 通过；每组精确包含四路 prepare/run。真实 summary 审计确认前三个 `oursv2-5` 方法的 4 个目标均为 `-0.050000000 m @ local +X`，OursV2 的 4 个目标位姿差为 `0`。V9.2 四种方法的 RTCP targets 与 19 cm V9.1 最大绝对差为 `0`；17 cm 逆工具变换只使 link6 target 沿物理 RTCP `+X`（canonical `+Z`）前移 `0.020000000 m`。两个 batch 共八路均产出并返回 0；IK miss 如实保留，不作 fallback。`python tests/test_piper_canonical_tcp_v1.py -v` 的 10 个测试通过（环境无 pytest，未安装新依赖）。两条最终 MP4 均为 H.264/yuv420p、1280×796、30 FPS、912 帧、30.4 秒，完整解码通过；18 秒原分辨率抽帧确认标题与画面分离、无标题重叠。

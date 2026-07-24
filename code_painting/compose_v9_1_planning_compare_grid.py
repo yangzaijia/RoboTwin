@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compose one four-strategy V9.1 planning comparison."""
+"""Compose one four-strategy V9.1/V9.2 planning comparison."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--asset-root", type=Path, required=True)
     parser.add_argument(
         "--logic",
-        choices=["canonical", "oursv2-5"],
+        choices=["canonical", "oursv2-5", "canonical17"],
         required=True,
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -45,7 +45,18 @@ def main() -> int:
         args.asset_root
         / "outputs/matched_candidate_image_video_release_20260722"
     )
-    run_root = release / "v9_1_planning_runs_close03" / args.logic
+    run_roots = {
+        "canonical": release / "v9_1_planning_runs_close03/canonical",
+        "oursv2-5": (
+            release
+            / "v9_1_planning_runs_close03_grasp_retreat05/oursv2-5"
+        ),
+        "canonical17": (
+            release
+            / "v9_2_planning_runs_canonical17_close03/canonical17"
+        ),
+    }
+    run_root = run_roots[args.logic]
     strategies = ("orientation", "fused", "topscore", "oursv2")
     videos = {
         strategy: run_root / strategy / "planner_output/head_cam_plan.mp4"
@@ -53,11 +64,19 @@ def main() -> int:
     }
     missing = [str(path) for path in videos.values() if not path.is_file()]
     if missing:
-        raise FileNotFoundError("Missing V9.1 input videos:\n" + "\n".join(missing))
+        raise FileNotFoundError(
+            "Missing V9.1/V9.2 input videos:\n" + "\n".join(missing)
+        )
 
-    output_name = f"v9-1_{args.logic}.mp4"
-    config_path = release / f"v9-1_{args.logic}_config.json"
-    manifest_name = f"v9-1_{args.logic}_manifest.json"
+    output_stems = {
+        "canonical": "v9-1_canonical",
+        "oursv2-5": "v9-1_oursv2-5",
+        "canonical17": "v9-2_canonical",
+    }
+    output_stem = output_stems[args.logic]
+    output_name = f"{output_stem}.mp4"
+    config_path = release / f"{output_stem}_config.json"
+    manifest_name = f"{output_stem}_manifest.json"
     duration = max(probe_duration(path) for path in videos.values())
     if args.logic == "canonical":
         method = "CANONICAL RTCP"
@@ -67,13 +86,22 @@ def main() -> int:
             "IK applies T_L6URDF_RTCP=Ry(-1.57)@Tx(0.19); "
             "rigid K2 transport preserves RTCP-to-object."
         )
-    else:
-        method = "OURS V2 + 5CM"
-        group = "LEGACY TARGET | EXTRA 5CM | CLOSE=0.3"
+    elif args.logic == "canonical17":
+        method = "CANONICAL-17CM"
+        group = "RTCP TARGET | CLOSE=0.3"
         note = (
-            "AnyGrasp panes preserve the V8 5cm local-forward candidate offset. "
-            "The OursV2 pane adds 5cm to its historical 14cm local +Z retreat "
-            "(19cm total); rigid K2 transport preserves EE-to-object."
+            "Candidate/human-center origin is the unchanged RTCP target. "
+            "This isolated V9.2 run applies "
+            "T_L6URDF_RTCP=Ry(-1.57)@Tx(0.17); "
+            "the default Canonical-v1 0.19m server literal is unchanged."
+        )
+    else:
+        method = "V9 GRASP - 5CM"
+        group = "V9 TARGET - 5CM | CLOSE=0.3"
+        note = (
+            "Orientation/Fused/Top-score add another 5cm retreat to the V9/V8 "
+            "grasp target (10cm total from the raw candidate center). "
+            "The OursV2 pane restores its unchanged historical 14cm target."
         )
 
     config = {
@@ -82,7 +110,12 @@ def main() -> int:
             "task": "pick_diverse_bottles",
             "episode_id": 0,
             "display_name": (
-                f"pick_diverse_bottles / id0 / V9.1 {args.logic}"
+                "pick_diverse_bottles / id0 / "
+                + (
+                    "V9.2 canonical17"
+                    if args.logic == "canonical17"
+                    else f"V9.1 {args.logic}"
+                )
             ),
             "interaction_keyframes": [38, 78],
             "planning_logic": args.logic,
@@ -117,12 +150,27 @@ def main() -> int:
                 "duration": duration,
             },
         },
-        "tiles": [
+        "tiles": [],
+    }
+    for index, (strategy, label, accent) in enumerate(
+        (
+            ("orientation", "ORIENTATION", "0x7C3AED"),
+            ("fused", "FUSED", "0x2563EB"),
+            ("topscore", "TOP-SCORE", "0xDC2626"),
+            ("oursv2", "OURS V2", "0x047857"),
+        )
+    ):
+        tile_method = method
+        tile_group = group
+        if args.logic == "oursv2-5" and strategy == "oursv2":
+            tile_method = "V9 REFERENCE"
+            tile_group = "HISTORICAL 14CM | UNCHANGED | CLOSE=0.3"
+        config["tiles"].append(
             {
                 "position": index + 1,
                 "type": "video",
-                "label": f"{label} | {method}",
-                "group": group,
+                "label": f"{label} | {tile_method}",
+                "group": tile_group,
                 "accent": accent,
                 "input": str(videos[strategy]),
                 "start": 0,
@@ -130,16 +178,7 @@ def main() -> int:
                 "offset": 0,
                 "speed": 1,
             }
-            for index, (strategy, label, accent) in enumerate(
-                (
-                    ("orientation", "ORIENTATION", "0x7C3AED"),
-                    ("fused", "FUSED", "0x2563EB"),
-                    ("topscore", "TOP-SCORE", "0xDC2626"),
-                    ("oursv2", "OURS V2", "0x047857"),
-                )
-            )
-        ],
-    }
+        )
     config_path.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",

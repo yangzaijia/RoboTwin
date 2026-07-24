@@ -4,7 +4,6 @@ set -u -o pipefail
 ROOT=/home/zaijia001/ssd/RoboTwin
 ASSET_ROOT=/home/zaijia001/ssd/data/piper/paper_qualitative_assets
 RELEASE_ROOT="$ASSET_ROOT/outputs/matched_candidate_image_video_release_20260722"
-RUN_ROOT="$RELEASE_ROOT/v9_1_planning_runs_close03"
 DATA_ROOT=/home/zaijia001/ssd/data/piper/hand/pick_diverse_bottles
 V8_ROOT="$ROOT/code_painting/anygrasp_plan_keyframes_piper_d435_replay_axes"
 MODE=""
@@ -19,10 +18,28 @@ while (($#)); do
     *) echo "ERROR unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-[[ "$MODE" =~ ^(canonical|oursv2-5)$ ]] || {
-  echo "Usage: $0 --mode canonical|oursv2-5 [--gpu N] [--dry-run]" >&2
+[[ "$MODE" =~ ^(canonical|oursv2-5|canonical17)$ ]] || {
+  echo "Usage: $0 --mode canonical|oursv2-5|canonical17 [--gpu N] [--dry-run]" >&2
   exit 2
 }
+
+case "$MODE" in
+  canonical)
+    RUN_ROOT="$RELEASE_ROOT/v9_1_planning_runs_close03"
+    PREP_LOGIC=canonical
+    TOOL_LENGTH_M=0.19
+    ;;
+  oursv2-5)
+    RUN_ROOT="$RELEASE_ROOT/v9_1_planning_runs_close03_grasp_retreat05"
+    PREP_LOGIC=oursv2-5
+    TOOL_LENGTH_M=0.19
+    ;;
+  canonical17)
+    RUN_ROOT="$RELEASE_ROOT/v9_2_planning_runs_canonical17_close03"
+    PREP_LOGIC=canonical
+    TOOL_LENGTH_M=0.17
+    ;;
+esac
 
 source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
@@ -65,7 +82,7 @@ run_one() {
     --input "$source_summary"
     --output "$prepared"
     --strategy "$strategy"
-    --logic "$MODE"
+    --logic "$PREP_LOGIC"
   )
   printf '[prepare] '; printf '%q ' "${prepare_cmd[@]}"; printf '\n'
   if ((DRY_RUN == 0)); then
@@ -73,7 +90,7 @@ run_one() {
   fi
 
   local planner reach_source approach_axis debug_forward global_adapter sapien_adapter
-  if [[ "$MODE" == canonical ]]; then
+  if [[ "$MODE" == canonical || "$MODE" == canonical17 ]]; then
     planner="$CANONICAL_PLANNER"
     reach_source=tcp
     approach_axis=local_x
@@ -98,6 +115,7 @@ run_one() {
 
   local command=(
     env CUDA_VISIBLE_DEVICES="$GPU"
+    PIPER_CANONICAL_TOOL_LENGTH_M="$TOOL_LENGTH_M"
     "$PY" -u "$planner"
     --anygrasp_dir "$ANY"
     --replay_dir "$REPLAY"

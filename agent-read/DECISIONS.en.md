@@ -98,3 +98,10 @@
 - The default remains `ee`, so historical V9 numbers and outputs do not change. Canonical runs must explicitly select `tcp`; an EE target must never be reinterpreted as RTCP.
 - Record `0.12 m pregrasp`, the historical `0.14 m OursV2 target retreat`, the `0.05 m candidate offset`, and the `0.19 m Canonical tool transform` as separate quantities in configs, manifests, and documentation.
 - The simulated gripper command is normalized to `[0,1]`. The current paper comparison uses `close=0.3`, meaning 30% of fully open width, not 0.3 meters.
+
+## 2026-07-24: correct the V9.1 retreat and isolate the V9.2 17 cm tool experiment
+
+- Apply the `oursv2-5` 5 cm addition only to the Orientation/Fused/Top-score V9 grasp targets. Their V8 targets already contain 5 cm, so the total retreat from the raw candidate center is 10 cm.
+- Restore the fourth OursV2 pane to its original V9 14 cm human-target retreat, with no extra 5 cm.
+- Canonical 17 cm is a run-scoped experimental override. It does not change the Piper server literal, the Canonical-v1 19 cm default, or prior V9.1 output.
+- V9.2 keeps RTCP targets and candidates identical. The 17 cm value changes only the link6 IK target produced by the inverse RTCP tool transform.

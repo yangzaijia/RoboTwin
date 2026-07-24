@@ -68,4 +68,6 @@
 
 - `rigid_object_transport` 可按目标语义保持 `EE→object` 或 `RTCP→object`；旧 V9 仍默认 EE，新 Canonical 四策略对比使用 RTCP。
 - 新对比固定 `pregrasp=0.12 m`、归一化夹爪 `open=1.0 / close=0.3`，并保留不可达候选而不做 fallback。
+- `v9-1_oursv2-5.mp4` 已重新定义为：前三个 AnyGrasp 方法相对旧 V9 grasp target 再退 5 cm；第四格保持历史 OursV2 14 cm retreat，不再额外加 5 cm。
+- 新 `v9-2_canonical.mp4` 复用不变的 RTCP targets，只在隔离运行中将活动工具长度由 19 cm 改为 17 cm；Canonical-v1 默认与 Piper 服务器字面量仍为 19 cm。
 - 生成、合成和检查命令见 `COMMANDS/planning_compare_v9_1.zh.md`。

@@ -91,12 +91,12 @@ def main() -> int:
             )
             final_retreat_m = 0.0
         else:
-            transform = lambda pose: shift_local(pose, axis=2, distance_m=-0.05)
+            transform = lambda pose: np.asarray(pose, dtype=np.float64)
             contract = (
-                "historical OursV2 target already includes 0.14m local +Z retreat; "
-                "add 0.05m in the same retreat direction (0.19m total)"
+                "preserve the historical V9/OursV2 target with its existing "
+                "0.14m local +Z retreat; no additional candidate retreat"
             )
-            final_retreat_m = historical_retreat_m + 0.05
+            final_retreat_m = historical_retreat_m
     elif args.logic == "canonical":
         transform = lambda pose: shift_local(pose, axis=0, distance_m=0.05)
         contract = (
@@ -105,12 +105,12 @@ def main() -> int:
         )
         final_retreat_m = 0.0
     else:
-        transform = lambda pose: np.asarray(pose, dtype=np.float64)
+        transform = lambda pose: shift_local(pose, axis=0, distance_m=-0.05)
         contract = (
-            "preserve V8 physical-axis target with -0.05m Piper local +X "
-            "candidate offset already materialized"
+            "V8 physical-axis target already includes -0.05m Piper local +X; "
+            "add another -0.05m local +X grasp retreat (-0.10m total)"
         )
-        final_retreat_m = 0.05
+        final_retreat_m = 0.10
 
     entries = selected_entries(summary)
     if not entries:

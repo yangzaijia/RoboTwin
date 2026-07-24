@@ -68,4 +68,6 @@
 
 - `rigid_object_transport` can preserve either `EE→object` or `RTCP→object` according to target semantics. Legacy V9 remains EE by default; the new four-strategy Canonical comparison uses RTCP.
 - The comparison fixes `pregrasp=0.12 m` and normalized gripper commands `open=1.0 / close=0.3`, preserving unreachable candidates without fallback.
+- `v9-1_oursv2-5.mp4` now means that the first three AnyGrasp methods retreat another 5 cm from the old V9 grasp target, while the fourth pane preserves the historical OursV2 14 cm retreat without an extra 5 cm.
+- New `v9-2_canonical.mp4` reuses unchanged RTCP targets and changes only the isolated active tool length from 19 cm to 17 cm. Canonical-v1 and the Piper server literal remain 19 cm by default.
 - See `COMMANDS/planning_compare_v9_1.en.md` for generation, composition, and validation commands.

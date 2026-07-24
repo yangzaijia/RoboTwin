@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Frame contract for the isolated PiperCanonicalTCP-v1 experiment line.
 
-The authoritative tool transform intentionally mirrors the Piper server
-literal values instead of replacing ``-1.57`` with ``-pi/2``::
+The default authoritative tool transform intentionally mirrors the Piper
+server literal values instead of replacing ``-1.57`` with ``-pi/2``::
 
     T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)
+
+An isolated experiment may override only the active tool length through
+``PIPER_CANONICAL_TOOL_LENGTH_M``.  This leaves the server literal and the
+default Canonical-v1 behavior unchanged.
 
 SAPIEN and the CuRobo URDF expose different local axes for the entity named
 ``link6``.  Runtime same-q FK establishes the exact adapter::
@@ -19,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -28,7 +33,15 @@ from scipy.spatial.transform import Rotation
 
 SCHEMA = "piper_canonical_tcp_v1.frame_contract.v1"
 SERVER_TOOL_PITCH_RAD = -1.57
-SERVER_TOOL_LENGTH_M = 0.19
+SERVER_DEFAULT_TOOL_LENGTH_M = 0.19
+SERVER_TOOL_LENGTH_ENV = "PIPER_CANONICAL_TOOL_LENGTH_M"
+SERVER_TOOL_LENGTH_M = float(
+    os.environ.get(SERVER_TOOL_LENGTH_ENV, str(SERVER_DEFAULT_TOOL_LENGTH_M))
+)
+if SERVER_TOOL_LENGTH_M <= 0.0:
+    raise ValueError(
+        f"{SERVER_TOOL_LENGTH_ENV} must be positive, got {SERVER_TOOL_LENGTH_M}"
+    )
 
 # The robot-frame preview stores each raw AnyGrasp/Real-TCP orientation as
 # ``R_W_CGRASP = R_W_RTCP @ R_RTCP_CGRASP``.  This is an exact signed axis
@@ -103,7 +116,7 @@ def sim_link6_to_urdf_link6_transform() -> np.ndarray:
 
 
 def server_urdf_link6_to_real_tcp_transform() -> np.ndarray:
-    """Return the exact server transform ``Ry(-1.57) @ Tx(0.19)``."""
+    """Return the active transform, defaulting to server ``Tx(0.19)``."""
     rotation = rotation_y(SERVER_TOOL_PITCH_RAD)
     transform = np.eye(4, dtype=np.float64)
     transform[:3, :3] = rotation
@@ -193,8 +206,21 @@ def frame_contract_payload() -> dict[str, Any]:
         ),
         "server_literals": {
             "tool_pitch_rad": SERVER_TOOL_PITCH_RAD,
-            "tool_length_m": SERVER_TOOL_LENGTH_M,
+            "tool_length_m": SERVER_DEFAULT_TOOL_LENGTH_M,
             "formula": "T_L6URDF_RTCP = Ry(-1.57) @ Tx(0.19)",
+        },
+        "active_tool_transform": {
+            "tool_pitch_rad": SERVER_TOOL_PITCH_RAD,
+            "tool_length_m": SERVER_TOOL_LENGTH_M,
+            "length_source": (
+                SERVER_TOOL_LENGTH_ENV
+                if SERVER_TOOL_LENGTH_ENV in os.environ
+                else "server_default"
+            ),
+            "formula": (
+                "T_L6URDF_RTCP = Ry(-1.57) @ "
+                f"Tx({SERVER_TOOL_LENGTH_M:.6g})"
+            ),
         },
         "notation": {
             "T_A_B": "pose of frame B expressed in frame A",
