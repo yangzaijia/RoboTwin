@@ -3525,11 +3525,3 @@ Validation: all three V9p dry-run commands contain `pure=1/debug=0`, and all thr
 - `compose_v9_1_planning_compare_grid.py` now formally produces `v9p_oursv2.mp4` and `v9p_canonical.mp4`. It validates all four pane summaries/commands before composition, normalizes to Constrained Baseline, and refreshes the manifest afterward.
 
 Validation: both dry runs contain exactly four prepare plus four run commands, and all eight formal runs exit zero. Against each non-clean reference, prepared poses and every pregrasp/grasp/action target pose have zero maximum delta, with identical stage reach/miss outcomes. All eight commands confirm `open=1.0 / close=0.3 / pure=1 / debug=0`. Both final videos are H.264 Constrained Baseline/yuv420p, 1280x796, 30 FPS, 912 frames, and 30.4 seconds with full-decode success; original-resolution QA at 18 seconds confirms no target axes/debug grippers in any pane and explicit `CLOSE=0.3` titles.
-
-## 2026-07-30 (Piper robot-only material recoloring)
-
-- Added opt-in `--piper_robot_gray_material_override`. Before replay objects are loaded, it visits only the two Piper articulations and replaces near-neutral robot materials whose mean linear RGB lies in the configurable range. It does not apply frame-space gray thresholds or masks.
-- Defaults are target `0.06` and source range `[0.10, 0.80]`. This run changed 98 robot visual parts spanning eight source gray levels. Red parts, bright-white labels, transparent bottles, bottle labels, the table, and backgrounds are never selected.
-- The four OursV2 V9p panes reuse the original `prepared_plan_summary.json` files and are isolated under `v10_robot_material_override_oursv2_20260730/`. The final 4x6 video inserts a robot-material-only row after the original clean-sim row and reuses the other five rows from the original grid.
-
-Validation: Python `py_compile` and `git diff --check` pass. After moving the implementation into tracked files, a fresh Orientation render has the same SHA-256 as the Orientation stream used in the formal grid. The final video is H.264 Constrained Baseline, `yuv420p`, 1920x1848, 30 FPS, 912 frames, and 30.4 seconds; `ffprobe` and full decode pass. Original-resolution QA at frame 540 confirms unchanged bottles and darkened light- and dark-gray robot segments.

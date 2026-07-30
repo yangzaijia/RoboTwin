@@ -3523,11 +3523,3 @@ Validation: V9p 三路 dry-run 精确为 `pure=1/debug=0`，三路实跑 exit �
 - `compose_v9_1_planning_compare_grid.py` 为 pure-scene 输出正式生成 `v9p_oursv2.mp4` 与 `v9p_canonical.mp4`；合成前验证四格 summary/command，合成后转为 Constrained Baseline 并刷新 manifest。
 
 Validation: 两组 dry-run 均精确为 4 prepare + 4 run，八路正式运行 exit 均为 0。相对各自非纯净参考，prepared poses 与全部 pregrasp/grasp/action target poses 最大差均为 `0`，stage reach/miss 完全一致；八路均确认 `open=1.0 / close=0.3 / pure=1 / debug=0`。两条最终视频均为 H.264 Constrained Baseline/yuv420p、1280×796、30 FPS、912 帧、30.4 秒并通过完整解码；18 秒原分辨率 QA 确认四格均无目标轴/调试夹爪且标题明确 `CLOSE=0.3`。
-
-## 2026-07-30（Piper 机器人专属材质调色）
-
-- 新增默认关闭的 `--piper_robot_gray_material_override`。它只遍历左右 Piper articulation 的渲染材质，在物体载入前将近中性灰、线性 RGB 均值位于可配置区间内的机器人材质替换为目标深灰；不再对合成后的整帧做灰度阈值或 mask 调色。
-- 默认参数为目标值 `0.06`、源区间 `[0.10, 0.80]`。本次实际覆盖 98 个 robot visual parts、8 种源灰色；红色部件、亮白标识、透明瓶子、瓶身标签、桌面和背景不进入修改。
-- 四路 OursV2 V9p 复用原 `prepared_plan_summary.json` 重渲染，结果隔离在 `v10_robot_material_override_oursv2_20260730/`。最终 4×6 视频在原 4×5 的 clean-sim 行之后插入 robot-material-only 行，其他五行复用原视频。
-
-Validation: Python `py_compile`、`git diff --check` 通过。整理到受跟踪实现后的 Orientation 重渲染与用于正式合成的 Orientation 视频 SHA-256 完全一致。最终视频为 H.264 Constrained Baseline、`yuv420p`、1920×1848、30 FPS、912 帧、30.4 秒，`ffprobe` 与完整解码通过；第 540 帧原分辨率视觉检查确认瓶子颜色不变、浅灰与深灰机器人段均被压暗。

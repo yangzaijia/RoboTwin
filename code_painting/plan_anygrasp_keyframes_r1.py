@@ -378,10 +378,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base_occluder_local_pos", type=float, nargs=3, default=[0.0, 0.0, 0.4], metavar=("X", "Y", "Z"))
     parser.add_argument("--base_occluder_half_size", type=float, nargs=3, default=[0.28, 0.32, 0.02], metavar=("HX", "HY", "HZ"))
     parser.add_argument("--base_occluder_color", type=float, nargs=3, default=[1.0, 1.0, 1.0], metavar=("R", "G", "B"))
-    parser.add_argument("--piper_robot_gray_material_override", type=int, default=0, help="Piper URDFIK-only visual option. If 1, recolor neutral gray materials on the robot articulation before scene objects are loaded; bottles and backgrounds are untouched.")
-    parser.add_argument("--piper_robot_gray_material_target", type=float, default=0.06, help="Target linear RGB value for recolored Piper neutral-gray materials.")
-    parser.add_argument("--piper_robot_gray_material_min", type=float, default=0.10, help="Minimum mean linear RGB value included in the Piper material override.")
-    parser.add_argument("--piper_robot_gray_material_max", type=float, default=0.80, help="Maximum mean linear RGB value included in the Piper material override; brighter white labels remain unchanged by default.")
     parser.add_argument("--lighting_mode", choices=["default", "front", "front_no_shadow"], default="front_no_shadow")
     parser.add_argument("--camera_cv_axis_mode", choices=sorted(base.CV_TO_WORLD_CAMERA_PRESETS.keys()), default="legacy_r1")
     parser.add_argument("--head_camera_local_pos", type=float, nargs=3, default=base.DEFAULT_HEAD_CAMERA_LOCAL_POS.tolist())
@@ -833,11 +829,6 @@ def build_renderer(args: argparse.Namespace) -> ReplayRenderer:
         attach_planner=attach_planner,
         hide_robot=False,
     )
-    if args.planner_backend == "urdfik" and bool(args.piper_robot_gray_material_override):
-        renderer_kwargs["robot_gray_material_override"] = True
-        renderer_kwargs["robot_gray_material_target"] = float(args.piper_robot_gray_material_target)
-        renderer_kwargs["robot_gray_material_min"] = float(args.piper_robot_gray_material_min)
-        renderer_kwargs["robot_gray_material_max"] = float(args.piper_robot_gray_material_max)
     if args.planner_backend == "urdfik":
         renderer_kwargs["urdfik_trajectory_mode"] = str(args.urdfik_trajectory_mode)
         renderer_kwargs["urdfik_joint_interp_waypoints"] = int(args.urdfik_joint_interp_waypoints)

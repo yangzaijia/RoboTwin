@@ -78,9 +78,3 @@
 - All four panes in both videos explicitly use `open=1.0 / close=0.3 / pure_scene_output=1 / debug_visualize_targets=0`. Candidates, prepared poses, stage targets, and reach/miss outcomes match the corresponding non-clean videos.
 - Both videos use H.264 Constrained Baseline, `yuv420p`, and faststart. The earlier single original-V9 pure-scene experiment used default `close=0.0`; it remains legacy and is not formal V9p.
 - See `COMMANDS/planning_compare_v9_1.en.md`.
-
-## Piper robot-only material recoloring
-
-- The Piper URDFIK renderer now has an opt-in robot-material override. It edits neutral-gray materials on the two robot articulations instead of recoloring final-frame pixels, so transparent bottles, bottle labels, and backgrounds remain unchanged.
-- Formal four-strategy OursV2 streams are under `paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v10_robot_material_override_oursv2_20260730/`. The aligned 4x6 video is `v9p_stage12_realbg_20260725/v10_oursv2_aligned_debug_robot_material_dark_4x6.mp4`.
-- See `COMMANDS/piper_robot_material_override.en.md` for parameters, isolated rerendering, and validation.

@@ -78,9 +78,3 @@
 - 两条四格均显式 `open=1.0 / close=0.3 / pure_scene_output=1 / debug_visualize_targets=0`；候选、prepared poses、stage targets 与 reach/miss 均和对应非纯净版本一致。
 - 两条均为 H.264 Constrained Baseline、`yuv420p` 与 faststart。早期单条原始 V9 pure-scene 使用默认 `close=0.0`，只保留作 legacy，不作为正式 V9p。
 - 生成命令见 `COMMANDS/planning_compare_v9_1.zh.md`。
-
-## Piper 机器人专属材质调色
-
-- Piper URDFIK 渲染器新增默认关闭的机器人材质覆盖开关。它直接修改左右机器人 articulation 的中性灰材质，不修改最终图像像素，因此透明瓶子、瓶身标签和背景保持不变。
-- 正式 OursV2 四策略结果位于 `paper_qualitative_assets/outputs/matched_candidate_image_video_release_20260722/v10_robot_material_override_oursv2_20260730/`；对应 4×6 对齐视频为 `v9p_stage12_realbg_20260725/v10_oursv2_aligned_debug_robot_material_dark_4x6.mp4`。
-- 参数、隔离重渲染和验证命令见 `COMMANDS/piper_robot_material_override.zh.md`。
