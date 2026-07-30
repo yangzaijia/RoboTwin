@@ -94,3 +94,9 @@ tmux set-option -t upload_oursv2_49ep remain-on-exit on
 tmux new-session -d -s upload_graspnet_25ep "rclone copy /home/zaijia001/.cache/huggingface/lerobot/local/robot_graspnet_piper0515_6task_25ep.zip gdrive:piper/multi/6task/robot_graspnet_piper0515 -P --drive-chunk-size 64M --transfers 4"
 tmux set-option -t upload_graspnet_25ep remain-on-exit on
 ~~~
+
+### 每臂 7 维 EE action 定义
+
+最终 LeRobot 的每臂 7 维为 `[ee_x, ee_y, ee_z, ee_roll, ee_pitch, ee_yaw, gripper]`，其中 RPY 由 `xyz` 顺序 Euler 角表示，单位为弧度。左右臂拼接后，`observation.state` 与 `action` 都是 14 维。
+
+不要与 planner 内部 pose 混淆：`pose_debug.jsonl` 的 TCP pose 是 `[x, y, z, qw, qx, qy, qz]`，夹爪命令单独记录；进入训练数据前，四元数会转换成 RPY，再把 gripper 拼成每臂第 7 维。

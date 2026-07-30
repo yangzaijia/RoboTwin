@@ -75,3 +75,9 @@ tmux set-option -t upload_oursv2_49ep remain-on-exit on
 tmux new-session -d -s upload_graspnet_25ep "rclone copy /home/zaijia001/.cache/huggingface/lerobot/local/robot_graspnet_piper0515_6task_25ep.zip gdrive:piper/multi/6task/robot_graspnet_piper0515 -P --drive-chunk-size 64M --transfers 4"
 tmux set-option -t upload_graspnet_25ep remain-on-exit on
 ~~~
+
+### Per-Arm 7D EE Action Schema
+
+Each final LeRobot arm action is `[ee_x, ee_y, ee_z, ee_roll, ee_pitch, ee_yaw, gripper]`. RPY uses `xyz` Euler order in radians. Concatenating the two arms gives 14D `observation.state` and 14D `action`.
+
+This differs from the planner-internal pose: a TCP pose in `pose_debug.jsonl` is `[x, y, z, qw, qx, qy, qz]`, with the gripper command stored separately. Before training-data export, the quaternion is converted to RPY and the gripper scalar is appended as the seventh per-arm value.
