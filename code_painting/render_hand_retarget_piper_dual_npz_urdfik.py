@@ -39,6 +39,10 @@ CUROBO_TO_SAPIEN_LINK_ROTATION = np.array(
 
 class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
     def __init__(self, *args, **kwargs) -> None:
+        self._robot_gray_material_override = bool(kwargs.pop("robot_gray_material_override", False))
+        self._robot_gray_material_target = float(kwargs.pop("robot_gray_material_target", 0.06))
+        self._robot_gray_material_min = float(kwargs.pop("robot_gray_material_min", 0.10))
+        self._robot_gray_material_max = float(kwargs.pop("robot_gray_material_max", 0.80))
         self.urdfik_trajectory_mode = str(kwargs.pop("urdfik_trajectory_mode", "joint_interp"))
         raw_cartesian_interp_steps = int(kwargs.pop("urdfik_cartesian_interp_steps", 8))
         self.urdfik_cartesian_interp_auto_step_m = max(float(kwargs.pop("urdfik_cartesian_interp_auto_step_m", 0.05)), 1e-4)
@@ -77,6 +81,7 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
         if kwargs.get("init_gripper_open") is None:
             kwargs["init_gripper_open"] = DEFAULT_INIT_GRIPPER_OPEN
         super().__init__(*args, **kwargs)
+        self._apply_robot_gray_material_override()
         self.ik_urdf_path = PIPER_URDF
         solver_kwargs = dict(
             urdf_file=self.ik_urdf_path,
@@ -111,6 +116,42 @@ class HandRetargetPiperDualURDFIKRenderer(PiperDualReplayRenderer):
             f"apply_curobo_to_sapien_link_rotation={int(self.urdfik_apply_curobo_to_sapien_link_rotation)} "
             f"exec_waypoint_scene_steps={self.execute_waypoint_scene_steps} "
             f"exec_settle_scene_steps={self.execute_settle_scene_steps}"
+        )
+
+    def _apply_robot_gray_material_override(self) -> None:
+        """Darken neutral robot materials without recoloring image pixels."""
+        if not self._robot_gray_material_override:
+            return
+
+        target = float(np.clip(self._robot_gray_material_target, 0.0, 1.0))
+        gray_min = float(np.clip(self._robot_gray_material_min, 0.0, 1.0))
+        gray_max = float(np.clip(self._robot_gray_material_max, gray_min, 1.0))
+        changed_parts = 0
+        changed_colors = set()
+
+        for articulation in (self.robot.left_entity, self.robot.right_entity):
+            for link in articulation.get_links():
+                for component in link.entity.get_components():
+                    for shape in getattr(component, "render_shapes", ()):
+                        for part in getattr(shape, "parts", ()):
+                            material = getattr(part, "material", None)
+                            if material is None:
+                                continue
+                            rgba = np.asarray(material.get_base_color(), dtype=np.float64).reshape(4)
+                            rgb = rgba[:3]
+                            neutral = float(np.max(rgb) - np.min(rgb)) <= 0.035
+                            level = float(np.mean(rgb))
+                            if not neutral or not (gray_min <= level <= gray_max):
+                                continue
+                            material.set_base_color([target, target, target, float(rgba[3])])
+                            changed_parts += 1
+                            changed_colors.add(tuple(round(float(value), 6) for value in rgba))
+
+        print(
+            "[piper-material-override] "
+            f"changed_parts={changed_parts} target={target:.3f} "
+            f"neutral_range=[{gray_min:.3f},{gray_max:.3f}] "
+            f"source_rgba={sorted(changed_colors)}"
         )
 
     def _current_arm_joints(self, arm: str) -> np.ndarray:
