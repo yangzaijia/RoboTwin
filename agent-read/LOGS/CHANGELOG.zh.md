@@ -3523,3 +3523,11 @@ Validation: V9p 三路 dry-run 精确为 `pure=1/debug=0`，三路实跑 exit �
 - `compose_v9_1_planning_compare_grid.py` 为 pure-scene 输出正式生成 `v9p_oursv2.mp4` 与 `v9p_canonical.mp4`；合成前验证四格 summary/command，合成后转为 Constrained Baseline 并刷新 manifest。
 
 Validation: 两组 dry-run 均精确为 4 prepare + 4 run，八路正式运行 exit 均为 0。相对各自非纯净参考，prepared poses 与全部 pregrasp/grasp/action target poses 最大差均为 `0`，stage reach/miss 完全一致；八路均确认 `open=1.0 / close=0.3 / pure=1 / debug=0`。两条最终视频均为 H.264 Constrained Baseline/yuv420p、1280×796、30 FPS、912 帧、30.4 秒并通过完整解码；18 秒原分辨率 QA 确认四格均无目标轴/调试夹爪且标题明确 `CLOSE=0.3`。
+
+## 2026-07-30（撤销 replay 材质调色实验）
+
+- 按用户要求通过 Git revert 完整撤销提交 `29eb4b0`；Piper URDFIK/replay 渲染器不再包含机器人材质覆盖参数或实现。
+- 对应 V10 材质重渲染目录和 4×6 材质版输出已删除，原 V9p、4×5 与 Stage1/2 素材保持不变。
+- 新的灰色选择实验是论文素材目录中的独立逐像素后处理，不进入 replay、候选、IK 或 Stage1/2 代码。
+
+Validation: revert commit 为 `7146334`；仓库只保留此前两份无关未跟踪文档。灰色后处理在编码前断言所有未选中 BGR 像素逐字节不变。

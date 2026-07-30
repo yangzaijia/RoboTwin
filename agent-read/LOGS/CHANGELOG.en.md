@@ -3525,3 +3525,11 @@ Validation: all three V9p dry-run commands contain `pure=1/debug=0`, and all thr
 - `compose_v9_1_planning_compare_grid.py` now formally produces `v9p_oursv2.mp4` and `v9p_canonical.mp4`. It validates all four pane summaries/commands before composition, normalizes to Constrained Baseline, and refreshes the manifest afterward.
 
 Validation: both dry runs contain exactly four prepare plus four run commands, and all eight formal runs exit zero. Against each non-clean reference, prepared poses and every pregrasp/grasp/action target pose have zero maximum delta, with identical stage reach/miss outcomes. All eight commands confirm `open=1.0 / close=0.3 / pure=1 / debug=0`. Both final videos are H.264 Constrained Baseline/yuv420p, 1280x796, 30 FPS, 912 frames, and 30.4 seconds with full-decode success; original-resolution QA at 18 seconds confirms no target axes/debug grippers in any pane and explicit `CLOSE=0.3` titles.
+
+## 2026-07-30 (revert the replay material-recoloring experiment)
+
+- Per user request, Git revert fully removes commit `29eb4b0`; the Piper URDFIK/replay renderer no longer contains robot-material override arguments or implementation.
+- The corresponding V10 material-rerender directories and 4x6 material output were deleted. Original V9p, 4x5, and Stage1/2 assets remain unchanged.
+- The new gray-selection experiment is an isolated per-pixel post-process under the paper-assets directory. It does not enter replay, candidate selection, IK, or Stage1/2 code.
+
+Validation: the revert commit is `7146334`; only the two pre-existing unrelated untracked documents remain. Before encoding, the gray-only processor asserts that every unselected BGR pixel remains byte-identical.
