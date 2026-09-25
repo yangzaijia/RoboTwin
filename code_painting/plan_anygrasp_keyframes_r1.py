@@ -304,6 +304,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_stage_replans", type=int, default=3)
     parser.add_argument("--replan_until_reached", type=int, default=1, help="If 1, keep replanning from the current state until the stage reaches tolerance. Use --replan_until_reached_max_attempts > 0 to impose an upper bound; <=0 means unbounded.")
     parser.add_argument("--replan_until_reached_max_attempts", type=int, default=0)
+    parser.add_argument("--roll_flip_fallback", type=int, default=0, help="If 1, when a whitelisted stage (see --roll_flip_fallback_stages) exhausts its attempt budget without reaching, retry that arm with the target rotated 180 deg about its local approach axis (physically equivalent for the symmetric parallel gripper), with a fresh attempt budget; all later stages of that arm then use the flipped roll. Only active with --action_target_mode independent_keyframe_candidate.")
+    parser.add_argument("--roll_flip_fallback_stages", type=str, default="pregrasp", help="Comma-separated stage labels allowed to trigger --roll_flip_fallback.")
+    parser.add_argument("--roll_flip_budget_mult", type=int, default=3, help="Attempt budget for the flipped roll = mult x the normal stage budget. IK near the reach limit succeeds only on some random seed draws (pnp_bread left pregrasp: ~1/5), so the fallback gets more tries.")
     parser.add_argument("--hold_frames_after_stage", type=int, default=2)
     parser.add_argument("--init_prefix_frames", type=int, default=0, help="Emit fixed init-pose frames before moving to keyframe-1; useful for downstream trimming.")
     parser.add_argument("--pause_after_keyframe1_seconds", type=float, default=0.0, help="After reaching keyframe-1 and closing the gripper, hold the robot at that pose for N seconds before planning/executing the next target.")
@@ -3160,6 +3163,41 @@ def make_skipped_stage_result(reason: str) -> Dict[str, object]:
     }
 
 
+# ── roll 翻转回退（2026-09-25）──
+# 平行夹爪绕接近轴（目标局部 Z）180° 对称：R 与 R·Rz(180°) 物理等价，TCP 位置不变。
+# GenX 注入按"离人手近"选 roll，但该朝向可能 IK 不可达（pnp_bread 左臂 pregrasp 实测）。
+# 开启 --roll_flip_fallback 后，白名单 stage 用完尝试预算仍未到达时，把该臂目标换成另一个等价 roll，
+# 追加一轮预算从当前状态继续规划；此后该臂所有 stage 的目标都用翻转后的 roll，保证抓取与搬运朝向一致。
+# 仅在 action_target_mode=independent_keyframe_candidate 下启用（目标均来自候选位姿，不会二次翻转）。
+ROLL_FLIP_STATE: Dict[str, object] = {"enabled": False, "stages": ("pregrasp",), "flipped": {}, "events": []}
+_RZ180 = np.diag([-1.0, -1.0, 1.0])
+
+
+def roll_flip_pose_wxyz(pose_world_wxyz: np.ndarray) -> np.ndarray:
+    pose = np.asarray(pose_world_wxyz, dtype=np.float64).reshape(7).copy()
+    rot = R.from_quat([pose[4], pose[5], pose[6], pose[3]]).as_matrix() @ _RZ180
+    q = R.from_matrix(rot).as_quat()
+    pose[3:7] = [q[3], q[0], q[1], q[2]]
+    return pose
+
+
+def roll_flip_effective_target(arm: str, pose_world_wxyz: np.ndarray) -> np.ndarray:
+    if ROLL_FLIP_STATE["flipped"].get(arm):
+        return roll_flip_pose_wxyz(pose_world_wxyz)
+    return pose_world_wxyz
+
+
+def roll_flip_try_activate(arm: str, label: str, attempt: int) -> bool:
+    if not ROLL_FLIP_STATE["enabled"] or ROLL_FLIP_STATE["flipped"].get(arm):
+        return False
+    if str(label) not in ROLL_FLIP_STATE["stages"]:
+        return False
+    ROLL_FLIP_STATE["flipped"][arm] = True
+    ROLL_FLIP_STATE["events"].append({"arm": str(arm), "stage": str(label), "after_attempt": int(attempt)})
+    print(f"[roll-flip] stage={label} arm={arm} 原 roll {attempt} 次未到达 -> 改用绕接近轴 180° 的等价 roll，追加预算重规划")
+    return True
+
+
 def stage_attempt_budget(args: argparse.Namespace) -> Optional[int]:
     if bool(args.replan_until_reached):
         max_attempts = int(args.replan_until_reached_max_attempts)
@@ -4422,6 +4460,7 @@ def execute_stage_until_reached(
     attempts = 0
     attempt_history = []
     max_attempts = stage_attempt_budget(args)
+    target_pose_world_wxyz = roll_flip_effective_target(arm, target_pose_world_wxyz)
     attempt = 0
     while True:
         attempt += 1
@@ -4502,6 +4541,7 @@ def execute_stage_until_reached(
                 "rot_err_deg": last_rot_err,
                 "reached": bool(reached),
                 "supervision_errors": supervision_errors,
+                "roll_flipped": bool(ROLL_FLIP_STATE["flipped"].get(arm, False)),
             }
         )
         print(
@@ -4554,6 +4594,10 @@ def execute_stage_until_reached(
                 "attempt_history": attempt_history,
             }
         if max_attempts is not None and attempt >= max_attempts:
+            if roll_flip_try_activate(arm, label, attempt):
+                target_pose_world_wxyz = roll_flip_pose_wxyz(target_pose_world_wxyz)
+                max_attempts += stage_attempt_budget(args) * max(int(args.roll_flip_budget_mult), 1)
+                continue
             break
 
     clear_ik_waypoint_visuals(renderer)
@@ -4810,6 +4854,7 @@ def execute_dual_stage_until_reached(
 ) -> Dict[str, object]:
     arms = [arm for arm in ("left", "right") if arm in target_pose_world_wxyz_by_arm]
     max_attempts = stage_attempt_budget(args)
+    target_pose_world_wxyz_by_arm = {a: roll_flip_effective_target(a, p) for a, p in target_pose_world_wxyz_by_arm.items()}
 
     attempt_history: List[Dict[str, object]] = []
     last_arm_metrics: Dict[str, Dict[str, object]] = {}
@@ -4950,6 +4995,7 @@ def execute_dual_stage_until_reached(
                 "arms": arm_metrics,
                 "frozen_arms": sorted(frozen_arms),
                 "reached": bool(stage_reached),
+                "roll_flipped_arms": sorted(a for a in arms if ROLL_FLIP_STATE["flipped"].get(a)),
             }
         )
         print(f"[attempt] stage={label} try={attempt}")
@@ -4987,6 +5033,15 @@ def execute_dual_stage_until_reached(
         if bool(args.dual_stage_freeze_reached_arms_on_replan):
             frozen_arms = {arm for arm in arms if bool(arm_metrics.get(arm, {}).get("reached", False))}
         if max_attempts is not None and attempt >= max_attempts:
+            newly_flipped = [
+                arm for arm in arms
+                if not bool(arm_metrics.get(arm, {}).get("reached", False)) and roll_flip_try_activate(arm, label, attempt)
+            ]
+            if newly_flipped:
+                for arm in newly_flipped:
+                    target_pose_world_wxyz_by_arm[arm] = roll_flip_pose_wxyz(target_pose_world_wxyz_by_arm[arm])
+                max_attempts += stage_attempt_budget(args) * max(int(args.roll_flip_budget_mult), 1)
+                continue
             break
 
     clear_ik_waypoint_visuals(renderer)
@@ -5473,6 +5528,10 @@ def generate_debug_preview(
 def main() -> None:
     args = parse_args()
     validate_candidate_frame_contract(args)
+    ROLL_FLIP_STATE["enabled"] = bool(args.roll_flip_fallback) and str(args.action_target_mode) == "independent_keyframe_candidate"
+    ROLL_FLIP_STATE["stages"] = tuple(x.strip() for x in str(args.roll_flip_fallback_stages).split(",") if x.strip())
+    if bool(args.roll_flip_fallback) and not ROLL_FLIP_STATE["enabled"]:
+        print(f"[roll-flip] disabled: action_target_mode={args.action_target_mode} derives targets from current pose")
     args.anygrasp_dir = args.anygrasp_dir.resolve()
     args.replay_dir = args.replay_dir.resolve()
     args.hand_npz = args.hand_npz.resolve()
@@ -7383,6 +7442,13 @@ def main() -> None:
         "reach_error_pose_source": args.reach_error_pose_source,
         "init_prefix_frames": int(args.init_prefix_frames),
         "execute_both_arms": int(args.execute_both_arms),
+        "roll_flip_fallback": {
+            "enabled": bool(ROLL_FLIP_STATE["enabled"]),
+            "stages": list(ROLL_FLIP_STATE["stages"]),
+            "budget_mult": int(args.roll_flip_budget_mult),
+            "flipped_arms": sorted(a for a, v in ROLL_FLIP_STATE["flipped"].items() if v),
+            "events": list(ROLL_FLIP_STATE["events"]),
+        },
         "dual_stage_require_all_plans": int(args.dual_stage_require_all_plans),
         "dual_stage_freeze_reached_arms_on_replan": int(args.dual_stage_freeze_reached_arms_on_replan),
         "require_keyframe1_reached_before_close": int(args.require_keyframe1_reached_before_close),

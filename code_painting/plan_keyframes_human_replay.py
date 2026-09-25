@@ -429,6 +429,7 @@ def run_planner_with_targets(
         "--reach_rot_tol_deg", str(args.reach_rot_tol_deg),
         "--replan_until_reached", "1",
         "--replan_until_reached_max_attempts", str(args.replan_until_reached_max_attempts),
+        "--roll_flip_fallback", str(int(args.roll_flip_fallback)),
         "--execute_interp_steps", str(args.execute_interp_steps),
         "--joint_trajectory_interpolation", args.joint_trajectory_interpolation,
         "--joint_command_scene_steps", str(args.joint_command_scene_steps),
@@ -561,6 +562,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--target_retreat_m", type=float, default=0.0,
                         help="Offset grasp target backward along approach axis (local Z) to convert hand TCP to link6 target. Set to gripper_bias (e.g. 0.12 for Piper) to compensate for wrist-to-tip distance.")
     parser.add_argument("--genx_grasp_json", type=str, default="", help="注入genx抓取(世界系4x4)json: {arm:{frame:4x4}}")
+    parser.add_argument("--roll_flip_fallback", type=int, default=0, help="转发给 planner: pregrasp 不可达时换绕接近轴 180° 的等价 roll 重试")
     parser.add_argument("--action_orientation_source", choices=["keyframe", "grasp"], default="grasp")
     parser.add_argument("--dual_stage_freeze_reached_arms_on_replan", type=int, default=1)
     parser.add_argument("--require_keyframe1_reached_before_close", type=int, default=1)
