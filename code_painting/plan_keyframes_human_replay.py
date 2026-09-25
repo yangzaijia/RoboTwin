@@ -205,6 +205,7 @@ def build_plan_summary(
     cv_axis_mode: str = "legacy_r1",
     action_orientation_source: str = "keyframe",
     target_retreat_m: float = 0.0,
+    genx_grasp: Optional[dict] = None,
 ) -> dict:
     """Build a complete plan_summary.json."""
     obj_map = TASK_OBJECT_MAP.get(task, {"left": "object", "right": "object"})
@@ -228,6 +229,15 @@ def build_plan_summary(
             if pose_wxyz is None:
                 print(f"  [WARNING] arm={arm} frame={kf_frame}: could not compute world pose, skipping")
                 continue
+            # genx 注入：抓取关键帧(idx==0)用 genx 抓取的世界系pose(同约定，无需remap)
+            if idx == 0 and genx_grasp is not None:
+                g = genx_grasp.get(arm, {}).get(str(int(kf_frame))) or genx_grasp.get(arm, {}).get(int(kf_frame))
+                if g is not None:
+                    import numpy as _np
+                    G = _np.asarray(g, dtype=_np.float64).reshape(4, 4)
+                    _q = R.from_matrix(G[:3, :3]).as_quat()  # xyzw
+                    pose_wxyz = _np.array([G[0,3], G[1,3], G[2,3], _q[3], _q[0], _q[1], _q[2]], dtype=_np.float64)
+                    print(f"  [genx] arm={arm} frame={kf_frame} 用genx抓取替代人手pose")
             # Apply target retreat along gripper local Z (approach axis).
             # The hand keyframe gives the TCP pose; retreat converts to link6 target.
             # Set --target_retreat_m to gripper_bias (e.g. 0.12 for Piper) so that
@@ -550,6 +560,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--piper_calibration_bundle", type=Path, default=None, help="Optional self-contained Piper calibration bundle; overrides robot_config and wrist camera local poses.")
     parser.add_argument("--target_retreat_m", type=float, default=0.0,
                         help="Offset grasp target backward along approach axis (local Z) to convert hand TCP to link6 target. Set to gripper_bias (e.g. 0.12 for Piper) to compensate for wrist-to-tip distance.")
+    parser.add_argument("--genx_grasp_json", type=str, default="", help="注入genx抓取(世界系4x4)json: {arm:{frame:4x4}}")
     parser.add_argument("--action_orientation_source", choices=["keyframe", "grasp"], default="grasp")
     parser.add_argument("--dual_stage_freeze_reached_arms_on_replan", type=int, default=1)
     parser.add_argument("--require_keyframe1_reached_before_close", type=int, default=1)
@@ -635,6 +646,11 @@ def main() -> None:
 
     # Build plan summary
     print(f"[human-replay] Computing world-space hand targets...", flush=True)
+    genx_grasp = None
+    if getattr(args, "genx_grasp_json", ""):
+        import json as _json
+        genx_grasp = _json.load(open(args.genx_grasp_json))
+        print(f"[human-replay] genx注入: {args.genx_grasp_json}", flush=True)
     plan_summary = build_plan_summary(
         task=args.task,
         video_id=args.video_id,
@@ -645,6 +661,7 @@ def main() -> None:
         cv_axis_mode=args.camera_cv_axis_mode,
         action_orientation_source=args.action_orientation_source,
         target_retreat_m=args.target_retreat_m,
+        genx_grasp=genx_grasp,
     )
 
     plan_summary_path = args.output_dir / "plan_summary_human_replay.json"
