@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd /home/zaijia001/ssd/RoboTwin
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 if [[ "${CONDA_DEFAULT_ENV:-}" != "RoboTwin_bw" ]]; then
   set +u
   conda activate RoboTwin_bw

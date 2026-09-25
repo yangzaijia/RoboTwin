@@ -63,13 +63,13 @@ if ((PURE_SCENE)); then
   esac
 fi
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
 
 ANY="$DATA_ROOT/pick_diverse_bottles_output/foundation_input_0"
 REPLAY="$DATA_ROOT/foundation_replay_d435/foundation_input_0"
 HAND="$DATA_ROOT/harmer_output/hand_detections_0.npz"
-PY=/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python3.10
+PY=/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/envs/RoboTwin_bw/bin/python3.10
 PREP="$ROOT/code_painting/prepare_v9_1_reuse_summary.py"
 BASE_PLANNER="$ROOT/code_painting/plan_anygrasp_keyframes_piper.py"
 CANONICAL_PLANNER="$ROOT/code_painting/piper_canonical_tcp_v1/planner.py"

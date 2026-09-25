@@ -1,4 +1,4 @@
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 # bash script/run_painting_v1_table.sh 3 "pour" 0 0 5 > log/1103_pour_0_0_2mode3max=5maddtable1.json
 # bash script/1-0run_painting_v1_only_obj.sh 3 "pour" 0 0 5
 # bash script/1-1run_painting_v1_only_obj.sh 1 "pour" 2 2 5

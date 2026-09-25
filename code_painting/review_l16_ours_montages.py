@@ -19,7 +19,7 @@ from typing import Any
 try:
     import cv2
 except ModuleNotFoundError as exc:
-    raise SystemExit("OpenCV is required. Run in RoboTwin_bw, for example: source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh && conda activate RoboTwin_bw") from exc
+    raise SystemExit("OpenCV is required. Run in RoboTwin_bw, for example: source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh && conda activate RoboTwin_bw") from exc
 
 TASKS = (
     "pick_diverse_bottles",

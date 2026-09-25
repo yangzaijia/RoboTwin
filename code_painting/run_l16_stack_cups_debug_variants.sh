@@ -11,7 +11,7 @@ SAM2=${SAM2:-/home/zaijia001/ssd/inpainting_sam2_robot}
 INPUT_ROOT=${INPUT_ROOT:-/home/zaijia001/ssd/data/piper/hand/stack_cups/harmer_input}
 OUTROOT=${OUTROOT:-/home/zaijia001/ssd/inpainting_sam2_robot/results_repaint_piper_h2_l16/stack_cups_debug_variants}
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate inpainting-sam2-r1
 cd "$SAM2"
 

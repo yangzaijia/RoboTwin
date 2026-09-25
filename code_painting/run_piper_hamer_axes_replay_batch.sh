@@ -4,7 +4,7 @@ set -euo pipefail
 # Batch replay Piper hand detections using the HaMeR/NPZ gripper axes directly:
 # orientation_remap_label=identity and stored_orientation_post_rot_xyz_deg=0 0 0.
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 
 INPUT=${1:-/home/zaijia001/ssd/data/piper/hand/pnp_star_pear_hamer_output_v2}
 OUT_ROOT=${2:-/home/zaijia001/ssd/RoboTwin/code_painting/output_piper_replay_hamer_axes_all}

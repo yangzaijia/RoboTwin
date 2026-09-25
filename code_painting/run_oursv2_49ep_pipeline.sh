@@ -23,7 +23,7 @@ DRY_RUN=${DRY_RUN:-0}
 SKIP_UPLOAD=${SKIP_UPLOAD:-0}
 SKIP_BUILD=${SKIP_BUILD:-0}
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 cd "$REPO"
 
 python3 "$SELECTION_SCRIPT" --allow-repeat

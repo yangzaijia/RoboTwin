@@ -33,7 +33,7 @@ human_prompt() {
   esac
 }
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate inpainting-sam2-r1
 cd "$SAM2"
 

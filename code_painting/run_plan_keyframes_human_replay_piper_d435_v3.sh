@@ -8,7 +8,7 @@ set -euo pipefail
 #   bash run_plan_keyframes_human_replay_piper_d435_v3.sh --gpu 2 --ids 0 --viewer --tasks pick_diverse_bottles --output_root /path/to/output
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 HAND_KEYFRAMES_ROOT=/home/zaijia001/ssd/RoboTwin/code_painting/h2o_manual_review
 
 GPU=2
@@ -281,7 +281,7 @@ for ID in "${IDS[@]}"; do
 
   echo "[start] task=${TASK} id=${ID} output=${OUT}"
   mkdir -p "$OUT"
-  PYTHON_BIN=/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python
+  PYTHON_BIN=/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/envs/RoboTwin_bw/bin/python
   if ! "${RUN_ENV[@]}" "$PYTHON_BIN" -u \
     /home/zaijia001/ssd/RoboTwin/code_painting/plan_keyframes_human_replay_v3.py \
     "${M_ARGS[@]}" 2>"${OUT}/stderr.log"; then

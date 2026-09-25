@@ -175,7 +175,7 @@ for ID in "${IDS[@]}"; do
   fi
 
   mkdir -p "$OUT"
-  PYTHON_BIN=/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python
+  PYTHON_BIN=/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/envs/RoboTwin_bw/bin/python
   if ! "${RUN_ENV[@]}" "$PYTHON_BIN" -u \
     "${SCRIPT_DIR}/plan_first_frame_foundation_pick_diverse_bottles.py" \
     "${ARGS[@]}" 2>"${OUT}/stderr.log"; then

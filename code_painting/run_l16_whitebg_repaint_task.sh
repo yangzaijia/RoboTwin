@@ -32,7 +32,7 @@ ids() {
   fi
 }
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate inpainting-sam3-dino3
 cd "$SAM3"
 

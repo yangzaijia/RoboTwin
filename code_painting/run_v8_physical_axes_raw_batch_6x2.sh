@@ -22,7 +22,7 @@ done
 
 SOURCE_RUN_TAG="${SOURCE_RUN_TAG:-$RUN_TAG}"
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
 
 PREVIEW_ROOT="$ROOT/code_painting/anygrasp_h2o_preview_d435_robot_frame_approach_axis_${SOURCE_RUN_TAG}"

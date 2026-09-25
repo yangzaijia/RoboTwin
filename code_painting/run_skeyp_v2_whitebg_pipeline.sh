@@ -7,7 +7,7 @@ set -eo pipefail
 # reinit-style zed_replay_d435.mp4 onto that background.
 
 ROOT=${ROOT:-/home/zaijia001/ssd/RoboTwin}
-CONDA_SH=${CONDA_SH:-/home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh}
+CONDA_SH=${CONDA_SH:-/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh}
 TASKS=${TASKS:-"pick_diverse_bottles place_bread_basket stack_cups handover_bottle pnp_bread pnp_tray"}
 REVIEW_ROOT=${REVIEW_ROOT:-$ROOT/code_painting/l16_ours_review_first25}
 RUN_TAG=${RUN_TAG:-skeyp_v2_reinit_whitebg_20260708}

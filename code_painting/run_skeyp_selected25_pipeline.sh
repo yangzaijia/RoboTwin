@@ -8,7 +8,7 @@ set -eo pipefail
 ROOT=${ROOT:-/home/zaijia001/ssd/RoboTwin}
 SAM2_ROOT=${SAM2_ROOT:-/home/zaijia001/ssd/inpainting_sam2_robot}
 SAM3_ROOT=${SAM3_ROOT:-/home/zaijia001/ssd/inpainting_sam3_robot}
-CONDA_SH=${CONDA_SH:-/home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh}
+CONDA_SH=${CONDA_SH:-/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh}
 
 TASKS=${TASKS:-"pick_diverse_bottles place_bread_basket stack_cups handover_bottle pnp_bread pnp_tray"}
 REVIEW_ROOT=${REVIEW_ROOT:-$ROOT/code_painting/l16_ours_review_first25}

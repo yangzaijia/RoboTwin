@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 
 TASK_NAME="${TASK_NAME:-d_pour_blue}"
 REVIEW_JSON="${REVIEW_JSON:-/home/zaijia001/ssd/inpainting_sam2_robot/results_repaint/d_pour_blue/video_review.json}"

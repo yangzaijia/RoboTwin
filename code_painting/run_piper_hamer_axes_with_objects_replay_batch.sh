@@ -4,7 +4,7 @@ set -euo pipefail
 # Batch replay Piper HaMeR gripper axes and overlay FoundationPose object tracks
 # in the same calibrated Piper scene.
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 
 HAND_INPUT=${1:-/home/zaijia001/ssd/data/piper/hand/pnp_star_pear_hamer_output_v2}
 OBJECT_INPUT_ROOT=${2:-/home/zaijia001/ssd/data/piper/hand/pnp_star_pear_foundation_vis/obj_vis}

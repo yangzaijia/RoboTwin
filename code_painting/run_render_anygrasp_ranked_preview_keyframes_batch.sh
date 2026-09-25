@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd /home/zaijia001/ssd/RoboTwin
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 if [[ "${CONDA_DEFAULT_ENV:-}" != "RoboTwin_bw" ]]; then
   set +u
   conda activate RoboTwin_bw
@@ -155,7 +155,7 @@ for id in "${ids[@]}"; do
   fi
 
   echo "[run-anygrasp-preview-keyframes-batch] processing id=${id} video=${video_name}"
-  /home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python \
+  /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/envs/RoboTwin_bw/bin/python \
     /home/zaijia001/ssd/RoboTwin/code_painting/render_anygrasp_ranked_preview.py \
     --anygrasp_dir "${anygrasp_dir}" \
     --replay_dir "${replay_dir}" \

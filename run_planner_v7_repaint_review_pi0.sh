@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Step 2: 用原始 planner v7 输出做 inpainting / repaint（不经过 smooth）
 cd /home/zaijia001/ssd/inpainting_sam2_robot
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate inpainting-sam2-r1
 
 GPU=0 \
@@ -35,7 +35,7 @@ bash /home/zaijia001/ssd/inpainting_sam2_robot/script/batch_head_cam_repaint_wit
 
 # Step 3: 手动可视化筛选 repaint 结果，按 y/n/m 写入 review json
 cd /home/zaijia001/ssd/inpainting_sam2_robot
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate inpainting-sam2-r1
 
 python /home/zaijia001/ssd/inpainting_sam2_robot/script/review_repaint_videos.py \
@@ -46,7 +46,7 @@ python /home/zaijia001/ssd/inpainting_sam2_robot/script/review_repaint_videos.py
 
 # Step 4: 把 review 中可行的原始 planner v7 repaint 数据处理成 robotwin / pi0 processed_data
 cd /home/zaijia001/ssd/RoboTwin/policy/pi0
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 conda activate RoboTwin_bw
 
 python /home/zaijia001/ssd/RoboTwin/policy/pi0/scripts/process_repainted_planner_outputs.py \

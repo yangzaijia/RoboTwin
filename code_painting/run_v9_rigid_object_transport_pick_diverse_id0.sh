@@ -26,7 +26,7 @@ while (($# > 0)); do
   esac
 done
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 cd "$ROOT"
 
 ANY="$DATA_ROOT/pick_diverse_bottles_output/foundation_input_0"
@@ -52,7 +52,7 @@ run_strategy() {
 
   local command=(
     env CUDA_VISIBLE_DEVICES="$GPU"
-    /home/zaijia001/ssd/miniconda3/bin/conda run -n RoboTwin_bw
+    /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/bin/conda run -n RoboTwin_bw
     python "$ROOT/code_painting/plan_anygrasp_keyframes_piper.py"
     --anygrasp_dir "$ANY"
     --replay_dir "$REPLAY"

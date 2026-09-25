@@ -111,7 +111,7 @@ print(",".join(map(str, episodes)))
 PY
 }
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 
 for TASK in $TASKS; do
   REVIEW_JSON="${REVIEW_ROOT}/selections/${TASK}/ours_review_selection.json"

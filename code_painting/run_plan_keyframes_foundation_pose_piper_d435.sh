@@ -7,7 +7,7 @@ set -euo pipefail
 #   bash run_plan_keyframes_foundation_pose_piper_d435.sh --gpu 2 --ids 0 --viewer --tasks pick_diverse_bottles --foundation_pose_retreat_m 0.05
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 HAND_KEYFRAMES_ROOT=/home/zaijia001/ssd/RoboTwin/code_painting/h2o_manual_review
 
 GPU=2
@@ -235,7 +235,7 @@ for ID in "${IDS[@]}"; do
 
   echo "[start] task=${TASK} id=${ID} output=${OUT}"
   mkdir -p "$OUT"
-  PYTHON_BIN=/home/zaijia001/ssd/miniconda3/envs/RoboTwin_bw/bin/python
+  PYTHON_BIN=/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/envs/RoboTwin_bw/bin/python
   if ! "${RUN_ENV[@]}" "$PYTHON_BIN" -u \
     /home/zaijia001/ssd/RoboTwin/code_painting/plan_keyframes_foundation_pose.py \
     "${K_ARGS[@]}" 2>"${OUT}/stderr.log"; then

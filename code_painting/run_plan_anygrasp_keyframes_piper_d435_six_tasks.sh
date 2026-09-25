@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
-CONDA_BIN=/home/zaijia001/ssd/miniconda3/bin/conda
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
+CONDA_BIN=/media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/bin/conda
 cd /home/zaijia001/ssd/RoboTwin
 
 GPU=2

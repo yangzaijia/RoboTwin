@@ -87,7 +87,7 @@ run_stage2_task() {
     stage1_root=$STACK_STAGE1_ROOT
   fi
   set +u
-  source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+  source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
   conda activate RoboTwin_bw
   set -u
   echo "[stage2/start] task=$task gpu=$gpu"
@@ -134,7 +134,7 @@ if [[ "${SKIP_STAGE2:-0}" != "1" ]]; then
 fi
 
 set +u
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 set -u
 TASKS="${TASKS[*]}" \
 TASK_GROUP="$TASK_GROUP" \

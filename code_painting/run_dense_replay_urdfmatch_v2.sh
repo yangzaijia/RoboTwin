@@ -15,7 +15,7 @@ if [[ ! -f "${INPUT}" ]]; then
   exit 1
 fi
 
-source /home/zaijia001/ssd/miniconda3/etc/profile.d/conda.sh
+source /media/mldadmin/home/s126mdg34_08/zaijia/miniconda3/etc/profile.d/conda.sh
 cd "${ROOT}"
 
 CUDA_VISIBLE_DEVICES=${GPU} conda run -n RoboTwin_bw python \
