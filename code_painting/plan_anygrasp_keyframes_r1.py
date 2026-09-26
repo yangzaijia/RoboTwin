@@ -195,6 +195,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--require_keyframe1_reached_before_action", type=int, default=0, help="If 1, skip the second-keyframe action stage unless the first-keyframe grasp stage reached the configured pose tolerance.")
     parser.add_argument("--debug_stop_after_keyframe1", type=int, default=0, help="If 1, stop execution after the first-keyframe pregrasp/grasp stages. The gripper is not closed and the second-keyframe action is marked skipped. Use this to debug init-to-keyframe1 reachability in isolation.")
     parser.add_argument("--planner_backend", choices=["urdfik", "curobo"], default="urdfik")
+    parser.add_argument("--curobo_target_adapter", choices=["none", "piper_tcp"], default="none", help="planner_backend=curobo 时的目标适配：piper_tcp = 把 human_replay 的 link6 目标(Z 接近)转成 RoboTwin 夹爪 TCP 约定(X 接近)再交给 cuRobo MotionGen。")
+    parser.add_argument("--curobo_target_tcp_offset_m", type=float, default=0.12, help="piper_tcp 适配时沿目标 Z 前移的距离（= human_replay 的 target_retreat_m / gripper_bias）。")
     parser.add_argument(
         "--candidate_selection_mode",
         choices=["planner", "top_score_auto"],
@@ -1229,6 +1231,14 @@ def create_execution_object_actor(
 def _get_actor_collision_shapes(actor: Optional[sapien.Entity]) -> List[object]:
     if actor is None:
         return []
+    direct = getattr(actor, "get_collision_shapes", None)  # SAPIEN3 组件（如关节 child_link）本身带 collision shapes
+    if direct is not None:
+        try:
+            shapes = list(direct())
+            if shapes:
+                return shapes
+        except Exception:
+            pass
     try:
         components = list(actor.get_components())
     except Exception:
@@ -1271,6 +1281,20 @@ def set_actor_collision_groups(actor: Optional[sapien.Entity], groups_per_shape:
     return True
 
 
+def _refresh_actor_collision_filtering(actor: Optional[sapien.Entity]) -> None:
+    """PhysX 不会对已在场景中的形状自动重算碰撞过滤；移出再加回场景使新的 collision groups 生效。"""
+    scene = getattr(actor, "scene", None)
+    if actor is None or scene is None:
+        return
+    try:
+        pose = actor.get_pose()
+        scene.remove_entity(actor)
+        scene.add_entity(actor)
+        actor.set_pose(pose)
+    except Exception as exc:  # 刷新失败不影响回放，只是碰撞可能不生效
+        print(f"[collision-refresh] failed for {_entity_name(actor)}: {exc}")
+
+
 def set_actor_collision_enabled(actor: Optional[sapien.Entity], enabled: bool, cached_groups: Optional[List[List[int]]]) -> Optional[List[List[int]]]:
     shapes = _get_actor_collision_shapes(actor)
     if not shapes:
@@ -1278,11 +1302,13 @@ def set_actor_collision_enabled(actor: Optional[sapien.Entity], enabled: bool, c
     if enabled:
         if cached_groups is not None:
             set_actor_collision_groups(actor, cached_groups)
+            _refresh_actor_collision_filtering(actor)
         return cached_groups
     if cached_groups is None:
         cached_groups = snapshot_actor_collision_groups(actor)
     disabled_groups = [[0, 0, 0, 0] for _ in shapes]
     set_actor_collision_groups(actor, disabled_groups)
+    _refresh_actor_collision_filtering(actor)
     return cached_groups
 
 
@@ -2204,7 +2230,11 @@ def _summarize_entity_collision(entity: Optional[sapien.Entity]) -> str:
     if not shapes:
         return f"{_entity_name(entity)}(shapes=0)"
     type_names = ",".join(sorted({_collision_shape_type_name(shape) for shape in shapes}))
-    return f"{_entity_name(entity)}(shapes={len(shapes)},types={type_names})"
+    try:
+        groups = sorted({tuple(int(x) for x in shape.get_collision_groups()) for shape in shapes})
+    except Exception:
+        groups = "n/a"
+    return f"{_entity_name(entity)}(shapes={len(shapes)},types={type_names},groups={groups})"
 
 
 def _summarize_entities_collision(entities: Sequence[sapien.Entity]) -> str:
@@ -2220,7 +2250,8 @@ def _contact_pairs_involving_entities(
 ) -> List[str]:
     if target_entity is None:
         return []
-    monitored_set = set(monitored_entities)
+    # 关节 child_link 是 PhysxArticulationLinkComponent，接触记录里是 Entity：统一成 Entity 再比较
+    monitored_set = {e if isinstance(e, sapien.Entity) else getattr(e, "entity", e) for e in monitored_entities}
     if not monitored_set:
         return []
     pairs: List[str] = []
@@ -2491,6 +2522,10 @@ def close_grippers_progressively_with_collision_stop(
                     f"arm={arm} iter={iter_idx + 1} cmd={float(state['current_cmd']):.3f} "
                     f"qpos_delta={qpos_delta:.6f} "
                     f"target_pose={target_pose_summary} "
+                    f"scene_contacts_total={len(renderer.scene.get_contacts())} "
+                    f"scene_pairs={sorted({'<->'.join(sorted(_entity_name(getattr(bd, 'entity', None)) for bd in c.bodies)) for c in renderer.scene.get_contacts()})} "
+                    f"finger_kinematic={[bool(getattr(e, 'kinematic', getattr(e, 'is_kinematic', lambda: 'n/a'))) if not callable(getattr(e, 'is_kinematic', None)) else e.is_kinematic() for e in list(state['gripper_entities'])]} "
+                    f"target_components={[type(c).__name__ for c in (state['object_actor'].get_components() if state['object_actor'] is not None else [])]} "
                     f"monitor_contact={int(has_contact)} base_contact={int(base_contact)} raw_target_contact_total={len(raw_target_contacts)} "
                     f"monitor_pairs={finger_pairs if finger_pairs else ['none']} "
                     f"base_pairs={base_pairs if base_pairs else ['none']} "
@@ -3196,6 +3231,43 @@ def roll_flip_try_activate(arm: str, label: str, attempt: int) -> bool:
     ROLL_FLIP_STATE["events"].append({"arm": str(arm), "stage": str(label), "after_attempt": int(attempt)})
     print(f"[roll-flip] stage={label} arm={arm} 原 roll {attempt} 次未到达 -> 改用绕接近轴 180° 的等价 roll，追加预算重规划")
     return True
+
+
+# ── 合爪记录（VB6-1，2026-09-26）──
+# 开启 --enable_grasp_action_object_collision 时，合爪逐步收紧、手指碰到物体即停（contact_stall）；
+# 各分支的合爪结果汇总到 summary.gripper_close_records，供评估“是否物理夹住”。
+GRIPPER_CLOSE_RECORDS: List[Dict[str, object]] = []
+
+
+def _record_gripper_close(branch: str, arm: str, summary_for_arm: Optional[Dict[str, object]]) -> None:
+    rec = {"branch": str(branch), "arm": str(arm)}
+    for k, v in (summary_for_arm or {}).items():
+        if isinstance(v, (bool, int, float, str)):
+            rec[k] = v
+    GRIPPER_CLOSE_RECORDS.append(rec)
+
+
+def handover_close_gripper(renderer, args, arm: str, object_states, obj_name: str) -> None:
+    """handover 分支合爪：开关关闭时保持原行为（直接合到底）；开启时与双臂/单臂分支一致，碰撞即停。"""
+    left_t = args.close_gripper if arm == "left" else None
+    right_t = args.close_gripper if arm == "right" else None
+    if not bool(args.enable_grasp_action_object_collision):
+        renderer.set_grippers(left_t, right_t)
+        return
+    set_object_collision_for_names(object_states, [obj_name], enabled=True)
+    cs = close_grippers_progressively_with_collision_stop(
+        renderer, left_t, right_t, {arm: object_states[obj_name].actor},
+        debug_collision_report=bool(args.debug_collision_report),
+        gripper_contact_monitor_mode=str(args.gripper_contact_monitor_mode),
+    )
+    s_ = cs.get(arm, {})
+    print(
+        "[gripper-close] "
+        f"{arm}:monitor={s_.get('monitor_mode', 'n/a')},reason={s_.get('reason', 'n/a')},"
+        f"cmd={float(s_.get('final_cmd', args.close_gripper)):.3f},contact={int(bool(s_.get('had_contact', False)))},"
+        f"base_contact={int(bool(s_.get('had_base_contact', False)))},raw_target_contact={int(bool(s_.get('had_raw_target_contact', False)))}"
+    )
+    _record_gripper_close("handover", arm, s_)
 
 
 def stage_attempt_budget(args: argparse.Namespace) -> Optional[int]:
@@ -5671,6 +5743,20 @@ def main() -> None:
     # get the correct gripper_T_camera pose instead of staying at link6 origin.
     base.apply_piper_calibration_bundle(args)
     renderer = build_renderer(args)
+    if args.planner_backend == "curobo" and args.curobo_target_adapter == "piper_tcp":
+        _F_TARGET_TO_ROBOTWIN = R.from_rotvec(np.pi * np.array([1.0, 0.0, 1.0]) / np.sqrt(2.0)).as_matrix()
+        _orig_plan_path = renderer.plan_path
+        _offset = float(args.curobo_target_tcp_offset_m)
+
+        def _plan_path_piper_tcp(arm, target_pose_world):
+            t = np.asarray(target_pose_world, dtype=np.float64).reshape(7)
+            Rt = R.from_quat([t[4], t[5], t[6], t[3]]).as_matrix()
+            q = R.from_matrix(Rt @ _F_TARGET_TO_ROBOTWIN).as_quat()
+            adapted = np.concatenate([t[:3] + _offset * Rt[:, 2], [q[3], q[0], q[1], q[2]]])
+            return _orig_plan_path(arm, adapted)
+
+        renderer.plan_path = _plan_path_piper_tcp
+        print(f"[curobo-adapter] piper_tcp enabled: offset={_offset:.3f}m, orientation R·F")
     hand_data = load_hand_data(args.hand_npz)
     replay_frame_indices, object_tracks = load_object_tracks(args.replay_dir, args.object_mesh_overrides)
     replay_head_camera_pose_by_frame = load_replay_head_camera_poses(args.replay_dir)
@@ -6065,7 +6151,7 @@ def main() -> None:
             _ho_tcp_to_obj = np.linalg.inv(pose_wxyz_to_matrix(_ho_tcp_pose)) @ object_states[_ho_right_obj].pose_world_matrix
 
             # Close right gripper
-            renderer.set_grippers(None, args.close_gripper)
+            handover_close_gripper(renderer, args, "right", object_states, _ho_right_obj)
             debug_execution_state.current_stage = "close_gripper"
             record_frame(renderer, head_writer, third_writer, ["stage=close_gripper", "arm=right"], use_overlay, debug_visuals, debug_execution_state, pure_scene_main=pure_scene_main, use_overlay_debug=use_overlay_debug)
             print(f"[handover] Stage 1 done: right grasped R1 frame={_ho_right_kf[0].source_frame}")
@@ -6129,7 +6215,7 @@ def main() -> None:
 
             # --- Stage 4: Handover transfer ---
             # Left close gripper (grab bottle)
-            renderer.set_grippers(args.close_gripper, None)
+            handover_close_gripper(renderer, args, "left", object_states, _ho_right_obj)
             debug_execution_state.current_stage = "close_gripper"
             record_frame(renderer, head_writer, third_writer, ["stage=close_gripper", "arm=left", "reason=handover_receive"], use_overlay, debug_visuals, debug_execution_state, pure_scene_main=pure_scene_main, use_overlay_debug=use_overlay_debug)
 
@@ -6483,6 +6569,8 @@ def main() -> None:
                             for arm_name in dual_arms
                         )
                     )
+                    for arm_name in dual_arms:
+                        _record_gripper_close("dual", arm_name, close_summary.get(arm_name))
                 else:
                     renderer.set_grippers(args.close_gripper, args.close_gripper)
                 debug_execution_state.current_stage = "close_gripper"
@@ -7033,6 +7121,7 @@ def main() -> None:
                         f"base_contact={int(bool(close_summary.get(exec_arm, {}).get('had_base_contact', False)))},"
                         f"raw_target_contact={int(bool(close_summary.get(exec_arm, {}).get('had_raw_target_contact', False)))}"
                     )
+                    _record_gripper_close("single", exec_arm, close_summary.get(exec_arm))
                 else:
                     renderer.set_grippers(args.close_gripper if exec_arm == "left" else None, args.close_gripper if exec_arm == "right" else None)
                 debug_execution_state.current_stage = "close_gripper"
@@ -7449,6 +7538,8 @@ def main() -> None:
             "flipped_arms": sorted(a for a, v in ROLL_FLIP_STATE["flipped"].items() if v),
             "events": list(ROLL_FLIP_STATE["events"]),
         },
+        "enable_grasp_action_object_collision": int(args.enable_grasp_action_object_collision),
+        "gripper_close_records": list(GRIPPER_CLOSE_RECORDS),
         "dual_stage_require_all_plans": int(args.dual_stage_require_all_plans),
         "dual_stage_freeze_reached_arms_on_replan": int(args.dual_stage_freeze_reached_arms_on_replan),
         "require_keyframe1_reached_before_close": int(args.require_keyframe1_reached_before_close),
