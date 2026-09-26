@@ -1,3 +1,4 @@
+import os
 import mplib.planner
 import mplib
 import numpy as np
@@ -71,6 +72,10 @@ try:
                         },
                     }
                 }
+            if os.environ.get("CUROBO_WORLD") == "none":
+                # 桌子按 RoboTwin 标准场景写死，与标定后的 piper 场景不符会导致 INVALID_START_STATE_WORLD_COLLISION；
+                # 探索时可把它移到远处，只做自碰撞检查（2026-09-26，mlda/0515 VC6-1）
+                world_config["cuboid"]["table"]["pose"] = [0.0, 0.0, -10.0, 1, 0, 0, 0.0]
             motion_gen_config = MotionGenConfig.load_from_robot_config(
                 self.yml_path,
                 world_config,
@@ -127,6 +132,10 @@ try:
             joint_indices = [self.all_joints.index(name) for name in self.active_joints_name if name in self.all_joints]
             joint_angles = [curr_joint_pos[index] for index in joint_indices]
             joint_angles = [round(angle, 5) for angle in joint_angles]  # avoid the precision problem
+            # 起始关节角夹进 cuRobo 限位内侧：仿真中 joint3=2e-5 这类数值误差会被 MotionGen 判为
+            # INVALID_START_STATE_JOINT_LIMITS 而拒绝规划（2026-09-26，mlda/0515 VC6-1）
+            _lim = self.motion_gen.kinematics.get_joint_limits().position.cpu().numpy()
+            joint_angles = np.clip(np.asarray(joint_angles, dtype=np.float64), _lim[0] + 1e-4, _lim[1] - 1e-4).tolist()
             start_joint_states = JointState.from_position(
                 torch.tensor(joint_angles).cuda().reshape(1, -1),
                 joint_names=self.active_joints_name,
@@ -146,6 +155,16 @@ try:
             res_result = dict()
             if result.success.item() == False:
                 res_result["status"] = "Fail"
+                if os.environ.get("CUROBO_DEBUG"):
+                    try:
+                        valid, st = self.motion_gen.check_start_state(start_joint_states)
+                    except Exception as exc:
+                        valid, st = None, repr(exc)
+                    print(f"[curobo-debug] fail status={result.status} valid_start={valid} start_status={st} "
+                          f"goal_base_p={[round(float(x), 4) for x in target_pose_p]} goal_base_q={[round(float(x), 4) for x in target_pose_q]} "
+                          f"frame_bias={self.frame_bias} base_p={[round(float(x), 4) for x in self.robot_origion_pose.p]} "
+                          f"start_joints={list(zip(self.active_joints_name, joint_angles))} "
+                          f"limits={self.motion_gen.kinematics.get_joint_limits().position.cpu().numpy().round(3).tolist()}", flush=True)
                 return res_result
             else:
                 res_result["status"] = "Success"
@@ -213,6 +232,10 @@ try:
             joint_indices = [self.all_joints.index(name) for name in self.active_joints_name if name in self.all_joints]
             joint_angles = [curr_joint_pos[index] for index in joint_indices]
             joint_angles = [round(angle, 5) for angle in joint_angles]  # avoid the precision problem
+            # 起始关节角夹进 cuRobo 限位内侧：仿真中 joint3=2e-5 这类数值误差会被 MotionGen 判为
+            # INVALID_START_STATE_JOINT_LIMITS 而拒绝规划（2026-09-26，mlda/0515 VC6-1）
+            _lim = self.motion_gen.kinematics.get_joint_limits().position.cpu().numpy()
+            joint_angles = np.clip(np.asarray(joint_angles, dtype=np.float64), _lim[0] + 1e-4, _lim[1] - 1e-4).tolist()
             joint_angles_cuda = (torch.tensor(joint_angles, dtype=torch.float32).cuda().reshape(1, -1))
             joint_angles_cuda = torch.cat([joint_angles_cuda] * num_poses, dim=0)
             start_joint_states = JointState.from_position(joint_angles_cuda, joint_names=self.active_joints_name)
